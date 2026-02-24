@@ -354,15 +354,15 @@ function MCC.RenderMCCUI()
 
     for _, playerName in ipairs(playerNames) do
         local pdata = MCC_Config[playerName]
-        local hasCraft = false
+        local hasRecipe = false
         for _, metier in ipairs(pdata.metiers or {}) do
-            if metier.currentCraft then
-                hasCraft = true
+            if metier.currentCraft or (metier.savedSchematics and next(metier.savedSchematics)) then
+                hasRecipe = true
                 break
             end
         end
 
-        if hasCraft then
+        if hasRecipe or playerName == MCC.player then
             MCC.CreatePlayerHeader(frames.HeaderScrollingFrame, playerName, pdata, col)
             MCC.CreatePlayerContent(contentFrame, playerName, pdata, col)
             col = col + 1

@@ -76,6 +76,10 @@ if locale == "frFR" then
     L["Note_03_1"] = "|cffffcc00Refonte UI :|r Nouveau look moderne (Style Doré)."
     L["Note_03_2"] = "|cffffcc00Optimisation :|r Code plus propre et globalisé."
     L["Note_03_3"] = "|cffffcc00Préparation :|r Base posée pour Factory View."
+    L["Note_10_1"] = "|cffffcc00Factory View :|r Vision complète des coûts et profits par session."
+    L["Note_10_2"] = "|cffffcc00Expérience :|r Votre personnage est désormais toujours visible, même sans craft actif."
+    L["Note_10_3"] = "|cffffcc00Maintenance :|r Bouton d'effacement rapide (✕) pour vos recettes."
+    L["Note_10_4"] = "|cffffcc00Profils :|r Gestion des types de crafteurs (Équipement / Ressources)."
     L["Set MCC Craft"] = "Définir Craft MCC"
 else
     -- English Translations (Explicit for clarity, though fallback works)
@@ -139,6 +143,11 @@ else
     L["Note_03_1"] = "|cffffcc00UI Refactor:|r New modern look (Gold Style)."
     L["Note_03_2"] = "|cffffcc00Optimization:|r Cleaner and globalized code."
     L["Note_03_3"] = "|cffffcc00Preparation:|r Base set for Factory View."
+    L["Note_10_1"] = "|cffffcc00Factory View:|r Full view of costs and profits per session."
+    L["Note_10_2"] =
+    "|cffffcc00Experience:|r Your current character is now always visible, even without an active craft."
+    L["Note_10_3"] = "|cffffcc00Maintenance:|r Quick delete button (✕) for recipes."
+    L["Note_10_4"] = "|cffffcc00Profiles:|r Management of crafter types (Equipment / Resources)."
     L["Set MCC Craft"] = "Set MCC Craft"
 end
 

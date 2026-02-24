@@ -33,6 +33,12 @@ MCC.UpdateNotes = {
         "Note_03_1",
         "Note_03_2",
         "Note_03_3",
+    },
+    ["1.0"] = {
+        "Note_10_1",
+        "Note_10_2",
+        "Note_10_3",
+        "Note_10_4",
     }
 }
 
