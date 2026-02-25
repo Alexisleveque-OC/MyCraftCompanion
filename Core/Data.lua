@@ -1,8 +1,89 @@
 local addonName, MCC = ...
+local GetRealmName = GetRealmName
+local UnitName = UnitName
+local Enum = Enum
+local C_Container = C_Container
+
+-- CONSISTENT PLAYER KEY: Used across the addon to group data
+-- Initialized in Data.lua for load order safety.
+MCC.player = UnitName("player") .. "-" .. (GetRealmName() or ""):gsub(" ", "")
+
+function MCC.GetMissingIngredients(multiplier)
+    local totals = {}
+    multiplier = multiplier or 1.0
+
+    local aggregateDemand = {}
+
+    for playerName, pdata in pairs(MCC_Config) do
+        if type(pdata) == "table" and pdata.isCharacter then
+            -- CRITICAL FIX: Only count hyphenated names to avoid doubling with stale "ShortName" entries
+            if playerName:find("-") then
+                for _, metier in ipairs(pdata.metiers or {}) do
+                    if metier.currentCraft and metier.craftRecipe then
+                        local craftQty = tonumber(metier.craftQuantity) or 1
+                        for _, slot in ipairs(metier.craftRecipe) do
+                            if slot.selectedItemID then
+                                local itemID = slot.selectedItemID
+                                local rank = slot.selectedRank or 0
+                                local key = itemID .. "-" .. rank
+                                local totalQty = (slot.quantity or 0) * craftQty
+
+                                if not aggregateDemand[key] then
+                                    aggregateDemand[key] = { itemID = itemID, rank = slot.selectedRank, quantity = 0 }
+                                end
+                                aggregateDemand[key].quantity = aggregateDemand[key].quantity + totalQty
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    for key, data in pairs(aggregateDemand) do
+        local itemID = data.itemID
+        local bagsOwned = 0
+        local bankOwned = 0
+        local warbankOwned = 0
+
+        for playerName, pdata in pairs(MCC_Config) do
+            if type(pdata) == "table" and pdata.isCharacter then
+                -- CRITICAL FIX: Only count hyphenated names
+                if playerName:find("-") then
+                    if pdata.inventory and pdata.inventory[itemID] then
+                        bagsOwned = bagsOwned + pdata.inventory[itemID]
+                    end
+                    if pdata.personalBank and pdata.personalBank[itemID] then
+                        bankOwned = bankOwned + pdata.personalBank[itemID]
+                    end
+                end
+            end
+        end
+        if MCC_Config.Warbank and MCC_Config.Warbank[itemID] then
+            warbankOwned = warbankOwned + MCC_Config.Warbank[itemID]
+        end
+
+        data.bagsOwned = bagsOwned
+        data.bankOwned = bankOwned
+        data.charOwned = bagsOwned + bankOwned
+        data.warbankOwned = warbankOwned
+        data.owned = data.charOwned + warbankOwned
+        data.requiredWithMargin = math.ceil(data.quantity * multiplier)
+        data.deficit = math.max(0, data.requiredWithMargin - data.owned)
+        table.insert(totals, data)
+    end
+
+    local sortedList = {}
+    for _, data in pairs(totals) do table.insert(sortedList, data) end
+    table.sort(sortedList, function(a, b) return MCC.GetItemNameSafe(a.itemID) < MCC.GetItemNameSafe(b.itemID) end)
+
+    return sortedList
+end
 
 -- Enregistrer un perso et ses métiers
 function MCC.RegisterPlayerCraft(playerName, professions)
     MCC_Config[playerName] = MCC_Config[playerName] or {}
+    MCC_Config[playerName].isCharacter = true
     MCC_Config[playerName].metiers = MCC_Config[playerName].metiers or {}
 
     for i, prof in ipairs(professions) do
@@ -136,14 +217,14 @@ function MCC.SetCurrentCraft(playerName, metierIndex, recipe, concCost, uiReagen
     -- Use captured cost from UI if provided, otherwise fallback to existing or recalculate
     metier.concentrationCost = concCost or metier.concentrationCost or 0
 
-    -- Auto-fill quantity with capacity
-    local capacity = MCC.GetCraftCapacity(metier)
-    if capacity and capacity > 0 then
-        metier.craftQuantity = capacity
-    end
+    -- User choice priority: Do NOT auto-fill quantity with capacity anymore
+    -- local capacity = MCC.GetCraftCapacity(metier)
+    -- if capacity and capacity > 0 then
+    --     metier.craftQuantity = capacity
+    -- end
 
     MCC.Log("MCC: " .. (MCC.L["Craft defined/updated:"] or "Craft defined/updated:") .. " " ..
-        metier.currentCraft .. " (Cost: " .. metier.concentrationCost .. ", Cap: " .. (capacity or 0) .. ")")
+        metier.currentCraft .. " (Cost: " .. (metier.concentrationCost or 0) .. ")")
 
     -- 3. SAVE IMMEDIATELY
     metier.savedSchematics[metier.activeRecipeID] = {
@@ -295,11 +376,13 @@ end
 
 function MCC.GetSessionEconomics(multiplier)
     multiplier = multiplier or (MCC_Config and MCC_Config.shoppingMargin) or 1.0
-    local deficitCost = 0
+
+    -- 1. Calculate Aggregate Demand (Sum of all character requirements)
+    local aggregateDemand = {}
     local totalRequiredCost = 0
 
     for playerName, pdata in pairs(MCC_Config) do
-        if type(pdata) == "table" then
+        if type(pdata) == "table" and pdata.isCharacter then
             for _, metier in ipairs(pdata.metiers or {}) do
                 if metier.currentCraft and metier.craftRecipe then
                     local craftQty = tonumber(metier.craftQuantity) or 1
@@ -309,26 +392,40 @@ function MCC.GetSessionEconomics(multiplier)
                             local totalQtyNeeded = math.ceil(qtyPerCraft * craftQty * multiplier)
                             local unitPrice = MCC.GetItemPrice(slot.selectedItemID)
 
+                            local key = slot.selectedItemID .. "-" .. (slot.selectedRank or 0)
+                            if not aggregateDemand[key] then
+                                aggregateDemand[key] = { itemID = slot.selectedItemID, quantity = 0, price = unitPrice }
+                            end
+                            aggregateDemand[key].quantity = aggregateDemand[key].quantity + totalQtyNeeded
                             totalRequiredCost = totalRequiredCost + (totalQtyNeeded * unitPrice)
-
-                            -- Calculate owned (naive search for now)
-                            local owned = 0
-                            for pName, pObj in pairs(MCC_Config) do
-                                if type(pObj) == "table" and pObj.inventory and pObj.inventory[slot.selectedItemID] then
-                                    owned = owned + pObj.inventory[slot.selectedItemID]
-                                end
-                            end
-                            if MCC_Config.Warbank and MCC_Config.Warbank[slot.selectedItemID] then
-                                owned = owned + MCC_Config.Warbank[slot.selectedItemID]
-                            end
-
-                            local deficit = math.max(0, totalQtyNeeded - owned)
-                            deficitCost = deficitCost + (deficit * unitPrice)
                         end
                     end
                 end
             end
         end
+    end
+
+    -- 2. Calculate Deficit Cost based on Aggregate Supply
+    local deficitCost = 0
+    for key, data in pairs(aggregateDemand) do
+        local itemID = data.itemID
+        local owned = 0
+        for pName, pObj in pairs(MCC_Config) do
+            if type(pObj) == "table" and pObj.isCharacter then
+                if pObj.inventory and pObj.inventory[itemID] then
+                    owned = owned + pObj.inventory[itemID]
+                end
+                if pObj.bank and pObj.bank[itemID] then
+                    owned = owned + pObj.bank[itemID]
+                end
+            end
+        end
+        if MCC_Config.Warbank and MCC_Config.Warbank[itemID] then
+            owned = owned + MCC_Config.Warbank[itemID]
+        end
+
+        local deficit = math.max(0, data.quantity - owned)
+        deficitCost = deficitCost + (deficit * data.price)
     end
 
     return deficitCost, totalRequiredCost
@@ -450,16 +547,16 @@ function MCC.UpdateCostFromRealCraft(playerName, metierIndex, realCost)
             metier.savedSchematics[metier.activeRecipeID].concentrationCost = realCost
         end
 
-        -- NEW: Auto-fill quantity with capacity
-        local capacity = MCC.GetCraftCapacity(metier)
-        if capacity and capacity > 0 then
-            metier.craftQuantity = capacity
-            if metier.savedSchematics[metier.activeRecipeID] then
-                metier.savedSchematics[metier.activeRecipeID].craftQuantity = capacity
-            end
-        end
+        -- NEW: User choice priority: Do NOT auto-fill quantity with capacity anymore
+        -- local capacity = MCC.GetCraftCapacity(metier)
+        -- if capacity and capacity > 0 then
+        --     metier.craftQuantity = capacity
+        --     if metier.savedSchematics[metier.activeRecipeID] then
+        --         metier.savedSchematics[metier.activeRecipeID].craftQuantity = capacity
+        --     end
+        -- end
 
-        MCC.Log("|cff00ff00MCC:|r Concentration (" .. realCost .. ") -> Cap: " .. (capacity or 0))
+        MCC.Log("|cff00ff00MCC:|r Concentration updated (" .. realCost .. ")")
         if MCC.UpdateShoppingList then MCC.UpdateShoppingList() end
         if MCC.RenderMCCUI then MCC.RenderMCCUI() end
     end
@@ -498,8 +595,9 @@ end
 -- MCC_Config.Warbank initialization moved to core.lua (ADDON_LOADED)
 
 function MCC.ScanBags()
-    local player = UnitName("player")
+    local player = MCC.player -- Consistently use full name with realm
     if not MCC_Config[player] then MCC_Config[player] = {} end
+    MCC_Config[player].isCharacter = true
     MCC_Config[player].inventory = {}
 
     -- Bags 0 to 5 (Backpack + Bags + Reagent Bag)
@@ -520,50 +618,54 @@ function MCC.ScanBags()
     end
 end
 
-function MCC.ScanWarbank()
-    -- Renamed to generic ScanBank in spirit, but let's keep name or expand it.
-    -- This function allows scanning ALL Bank related bags when Bank frame is open.
+function MCC.ScanPersonalBank()
+    local player = MCC.player
+    if not MCC_Config[player] then MCC_Config[player] = {} end
+    MCC_Config[player].isCharacter = true
+    -- Always reset to get a clean snapshot
+    MCC_Config[player].personalBank = {}
 
-    local tempWarbank = {}
-    local foundAny = false
-
-    -- 1. Standard Bank (-1) and Reagent Bank (-3)
+    -- Personal bank bags ONLY: main bank slot (-1), reagent bank (-3), and physical bank bags (6-12)
+    -- Warbank tabs start at 13+ and are handled separately by ScanWarbank()
     local bankBags = { -1, -3 }
+    for bag = 6, 12 do
+        -- Only add if it's a legit personal bank bag (not a warbank tab)
+        local numSlots = C_Container.GetContainerNumSlots(bag)
+        if numSlots > 0 and bag < (Enum.BagIndex.AccountBankTab_1 or 13) then
+            table.insert(bankBags, bag)
+        end
+    end
+
     for _, bag in ipairs(bankBags) do
         local numSlots = C_Container.GetContainerNumSlots(bag)
         if numSlots > 0 then
-            foundAny = true
             for slot = 1, numSlots do
                 local info = C_Container.GetContainerItemInfo(bag, slot)
                 if info and info.itemID then
-                    tempWarbank[info.itemID] = (tempWarbank[info.itemID] or 0) + info.stackCount
+                    local itemID = info.itemID
+                    MCC_Config[player].personalBank[itemID] = (MCC_Config[player].personalBank[itemID] or 0) +
+                        info.stackCount
                 end
             end
         end
     end
 
-    -- 2. Bank Bags (6-12)
-    for bag = 6, 12 do
-        local numSlots = C_Container.GetContainerNumSlots(bag)
-        if numSlots > 0 then
-            foundAny = true
-            for slot = 1, numSlots do
-                local info = C_Container.GetContainerItemInfo(bag, slot)
-                if info and info.itemID then
-                    tempWarbank[info.itemID] = (tempWarbank[info.itemID] or 0) + info.stackCount
-                end
-            end
-        end
-    end
+    if MCC.UpdateShoppingList then MCC.UpdateShoppingList() end
+end
 
-    -- 3. Warbank (13+)
+function MCC.ScanWarbank()
+    -- ONLY scans Account-wide Warbank tabs (13+)
+    -- Personal bank bags (6-12) are handled separately by ScanPersonalBank()
+    local tempWarbank = {}
+
     local startBank = Enum.BagIndex.AccountBankTab_1 or 13
-    local endBank = (Enum.BagIndex.AccountBankTab_5 or 17)
+    local endBank = Enum.BagIndex.AccountBankTab_5 or 17
 
+    local hasData = false
     for bag = startBank, endBank do
         local numSlots = C_Container.GetContainerNumSlots(bag)
         if numSlots > 0 then
-            foundAny = true
+            hasData = true
             for slot = 1, numSlots do
                 local info = C_Container.GetContainerItemInfo(bag, slot)
                 if info and info.itemID then
@@ -573,13 +675,12 @@ function MCC.ScanWarbank()
         end
     end
 
-    if foundAny then
+    -- PROTECT PERSISTENCE: Only overwrite if we actually scanned something.
+    -- If hasData is false, it usually means the bank is not open or data isn't cached yet.
+    -- We don't want to wipe the global Warband data on every character login!
+    if hasData then
         MCC_Config.Warbank = tempWarbank
-        -- MCC.Log("Banque & Warbank scannées.")
-        if MCC.UpdateShoppingList then
-            MCC.UpdateShoppingList()
-        end
-    else
-        -- MCC.Log("Banque fermée ou vide.")
     end
+
+    if MCC.UpdateShoppingList then MCC.UpdateShoppingList() end
 end

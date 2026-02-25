@@ -28,19 +28,6 @@ function MCC.InitShoppingUI(parent)
     exportButton:SetText(MCC.L["Export Auctionator"] or "Export Auctionator")
     exportButton:SetScript("OnClick", function() MCC.ShowExportPopup() end)
 
-    local vendorLabel = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    vendorLabel:SetPoint("LEFT", exportButton, "RIGHT", 20, 0)
-    vendorLabel:SetText(MCC.L["Vendor:"])
-
-    local vendorBox = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
-    vendorBox:SetSize(100, 20)
-    vendorBox:SetPoint("LEFT", vendorLabel, "RIGHT", 10, 0)
-    vendorBox:SetAutoFocus(false)
-    vendorBox:SetText("")
-    vendorBox:SetScript("OnTextChanged", function(self)
-        MCC_Config.vendorName = self:GetText()
-    end)
-
     local shoppingContent = CreateFrame("ScrollFrame", "MCC_ShoppingScroll", parent, "UIPanelScrollFrameTemplate")
     shoppingContent:SetPoint("TOPLEFT", 10, -35)
     shoppingContent:SetPoint("BOTTOMRIGHT", -30, 10)
@@ -49,18 +36,41 @@ function MCC.InitShoppingUI(parent)
     container:SetSize(1, 1)
     shoppingContent:SetScrollChild(container)
 
+    -- Collapse Toggle Button
+    local collapseBtn = CreateFrame("Button", nil, parent, "BackdropTemplate")
+    collapseBtn:SetSize(120, 18)
+    collapseBtn:SetPoint("TOPRIGHT", -10, -10)
+    if MCC.Styles then
+        collapseBtn:SetBackdrop(MCC.Styles.Backdrop)
+        collapseBtn:SetBackdropColor(unpack(MCC.Styles.Colors.BgSubtle))
+        collapseBtn:SetBackdropBorderColor(unpack(MCC.Styles.Colors.Gold))
+    end
+    local collapseText = collapseBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    collapseText:SetPoint("CENTER")
+    collapseBtn:SetFontString(collapseText)
+
+    collapseBtn:SetScript("OnClick", function()
+        MCC_Config.collapseIngredients = not MCC_Config.collapseIngredients
+        MCC.UpdateShoppingList()
+    end)
+
     -- Update the internal references in Main.lua via a setter or just store them in MCC
     MCC.MultBox = multBox
-    MCC.VendorBox = vendorBox
     MCC.ShoppingScroll = shoppingContent
     MCC.ShoppingContainer = container
+    MCC.CollapseBtn = collapseBtn
 end
-
--- Remove the SetupShoppingSection function as it's now redundancy
 
 function MCC.UpdateShoppingList()
     local shoppingContainer = MCC.ShoppingContainer
     if not shoppingContainer or not MCC.MultBox then return end
+
+    -- Handle Button Text
+    if MCC.CollapseBtn then
+        local label = MCC_Config.collapseIngredients and (MCC.L["Expand Ingredients"] or "Expand Ingredients")
+            or (MCC.L["Collapse Ingredients"] or "Collapse Ingredients")
+        MCC.CollapseBtn:SetText(label)
+    end
 
     for _, child in ipairs({ shoppingContainer:GetChildren() }) do
         child:Hide()
@@ -68,48 +78,7 @@ function MCC.UpdateShoppingList()
     end
 
     local multiplier = tonumber(MCC.MultBox:GetText()) or 1.0
-    local totals = {}
-
-    for playerName, pdata in pairs(MCC_Config) do
-        if type(pdata) == "table" then
-            for _, metier in ipairs(pdata.metiers or {}) do
-                if metier.currentCraft and metier.craftRecipe then
-                    local craftQty = tonumber(metier.craftQuantity) or 1
-                    for _, slot in ipairs(metier.craftRecipe) do
-                        if slot.selectedItemID then
-                            local itemID = slot.selectedItemID
-                            local rank = slot.selectedRank or 0
-                            local key = itemID .. "-" .. rank
-                            local totalQty = (slot.quantity or 0) * craftQty
-
-                            if not totals[key] then
-                                totals[key] = { itemID = itemID, rank = slot.selectedRank, quantity = 0, owned = 0 }
-                            end
-                            totals[key].quantity = totals[key].quantity + totalQty
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    for key, data in pairs(totals) do
-        local itemID = data.itemID
-        local owned = 0
-        for playerName, pdata in pairs(MCC_Config) do
-            if type(pdata) == "table" and pdata.inventory and pdata.inventory[itemID] then
-                owned = owned + pdata.inventory[itemID]
-            end
-        end
-        if MCC_Config.Warbank and MCC_Config.Warbank[itemID] then
-            owned = owned + MCC_Config.Warbank[itemID]
-        end
-        data.owned = owned
-    end
-
-    local sortedList = {}
-    for _, data in pairs(totals) do table.insert(sortedList, data) end
-    table.sort(sortedList, function(a, b) return MCC.GetItemNameSafe(a.itemID) < MCC.GetItemNameSafe(b.itemID) end)
+    local sortedList = MCC.GetMissingIngredients(multiplier)
 
     local profit, revenue, deficitCost, totalRequiredCost = 0, 0, 0, 0
     if MCC.GetSessionProfit then
@@ -117,6 +86,7 @@ function MCC.UpdateShoppingList()
     end
 
     local y = 0
+    -- ALWAYS SHOW HEADER if there's data
     if totalRequiredCost > 0 then
         local header = CreateFrame("Frame", nil, shoppingContainer)
         header:SetSize(400, 80)
@@ -153,47 +123,57 @@ function MCC.UpdateShoppingList()
         y = -80
     end
 
-    for _, data in ipairs(sortedList) do
-        local line = CreateFrame("Frame", nil, shoppingContainer)
-        line:SetSize(400, 20)
-        line:SetPoint("TOPLEFT", 0, y)
-        local text = line:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        text:SetPoint("LEFT")
+    -- ONLY SHOW INGREDIENTS IF NOT COLLAPSED
+    if not MCC_Config.collapseIngredients then
+        for _, data in ipairs(sortedList) do
+            local line = CreateFrame("Frame", nil, shoppingContainer)
+            line:SetSize(400, 25)
+            line:SetPoint("TOPLEFT", 0, y)
 
-        local requiredWithMargin = math.ceil(data.quantity * multiplier)
-        local deficit = math.max(0, requiredWithMargin - data.owned)
-        local lineCost = deficit * MCC.GetItemPrice(data.itemID)
+            local icon = line:CreateTexture(nil, "OVERLAY")
+            icon:SetSize(20, 20)
+            icon:SetPoint("LEFT", 5, 0)
+            local _, _, _, _, _, _, _, _, _, itemTexture = GetItemInfo(data.itemID)
+            icon:SetTexture(itemTexture or 134400)
 
-        local _, _, quality = C_Item.GetItemInfo(data.itemID)
-        local itemColorPrefix = "|cffffffff"
-        if quality then
-            local _, _, _, hex = C_Item.GetItemQualityColor(quality)
-            if hex then itemColorPrefix = "|c" .. hex end
+            local nameText = line:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            nameText:SetPoint("LEFT", icon, "RIGHT", 5, 0)
+            local itemName = MCC.GetItemNameSafe(data.itemID)
+            if data.rank and data.rank > 0 then
+                itemName = itemName .. " |cff00ccff(R" .. data.rank .. ")|r"
+            end
+            nameText:SetText(itemName)
+
+            local countText = line:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            countText:SetPoint("RIGHT", -10, 0)
+
+            local status = ""
+            if data.deficit > 0 then
+                status = "|cffff4444" .. data.deficit .. " " .. (MCC.L["missing"] or "manquants") .. "|r"
+            else
+                status = "|cff00ff00" .. (MCC.L["OK"] or "OK") .. "|r"
+            end
+
+            countText:SetText(string.format("%d/%d  (%s)", data.owned, data.requiredWithMargin, status))
+
+            -- Tooltip
+            line:SetScript("OnEnter", function(self)
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                GameTooltip:SetItemByID(data.itemID)
+                GameTooltip:AddLine(" ")
+                GameTooltip:AddLine(MCC.L["Owned:"] or "Possédé :")
+                GameTooltip:AddDoubleLine("- Sak / Bags:", data.bagsOwned or 0, 1, 1, 1, 1, 1, 1)
+                GameTooltip:AddDoubleLine("- Bank:", data.bankOwned or 0, 1, 1, 1, 1, 1, 1)
+                GameTooltip:AddDoubleLine("- Warbank:", data.warbankOwned or 0, 1, 1, 1, 1, 1, 1)
+                GameTooltip:Show()
+            end)
+            line:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+            y = y - 25
         end
-
-        local color = "|1cffffffff"
-        if deficit == 0 then
-            color = "|cff00ff00"
-        elseif deficit < requiredWithMargin then
-            color = "|cffffff00"
-        else
-            color = "|cffff0000"
-        end
-
-        local priceStr = (lineCost > 0) and (" |cffffd700(" .. GetMoneyString(lineCost, true) .. ")|r") or ""
-        text:SetText(color ..
-            deficit ..
-            "x|r " ..
-            itemColorPrefix ..
-            MCC.GetItemNameSafe(data.itemID) ..
-            "|r" ..
-            MCC.GetRankIcon(data.rank) ..
-            priceStr .. " |cffaaaaaa(" .. (MCC.L["Owned:"] or "Poss:") .. " " .. data.owned .. ")|r")
-
-        MCC.AttachItemTooltip(line, data.itemID)
-        y = y - 20
     end
-    shoppingContainer:SetSize(400, math.abs(y))
+
+    shoppingContainer:SetHeight(math.abs(y))
 end
 
 function MCC.ShowExportPopup()
@@ -247,43 +227,14 @@ function MCC.ShowExportPopup()
 
     local multiplier = tonumber(frames.MultBox:GetText()) or 1.0
     local exportText = "MCC Export"
-    local totals = {}
+    local missing = MCC.GetMissingIngredients(multiplier)
 
-    for playerName, pdata in pairs(MCC_Config) do
-        for _, metier in ipairs(pdata.metiers or {}) do
-            if metier.currentCraft and metier.craftRecipe then
-                local craftQty = tonumber(metier.craftQuantity) or 1
-                for _, slot in ipairs(metier.craftRecipe) do
-                    if slot.selectedItemID then
-                        local itemID = slot.selectedItemID
-                        local rank = slot.selectedRank or 0
-                        local key = itemID .. "-" .. rank
-                        local totalQty = (slot.quantity or 0) * craftQty
-                        if not totals[key] then totals[key] = { itemID = itemID, rank = slot.selectedRank, quantity = 0, owned = 0 } end
-                        totals[key].quantity = totals[key].quantity + totalQty
-                    end
-                end
-            end
-        end
-    end
-
-    for key, data in pairs(totals) do
-        local itemID = data.itemID
-        local owned = 0
-        for playerName, pdata in pairs(MCC_Config) do
-            if pdata.inventory and pdata.inventory[itemID] then owned = owned + pdata.inventory[itemID] end
-        end
-        if MCC_Config.Warbank and MCC_Config.Warbank[itemID] then owned = owned + MCC_Config.Warbank[itemID] end
-        data.owned = owned
-    end
-
-    for key, data in pairs(totals) do
-        local required = math.ceil(data.quantity * multiplier)
-        local missing = math.max(0, required - data.owned)
-        if missing > 0 then
+    for _, data in ipairs(missing) do
+        if data.deficit > 0 then
             local name = MCC.GetItemNameSafe(data.itemID)
             local rankText = (data.rank and data.rank > 0) and tostring(data.rank) or ""
-            exportText = exportText .. "^\"" .. name .. "\";;;;;;;;;;;" .. rankText .. ";;" .. missing
+            -- Auctionator Shopping List Import format
+            exportText = exportText .. "^\"" .. name .. "\";;;;;;;;;;;" .. rankText .. ";;" .. data.deficit
         end
     end
 

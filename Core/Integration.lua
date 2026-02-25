@@ -1,4 +1,22 @@
 local addonName, MCC = ...
+local CreateFrame = CreateFrame
+local C_Item = C_Item
+local C_Timer = C_Timer
+local C_TradeSkillUI = C_TradeSkillUI
+local UnitName = UnitName
+local GetRealmName = GetRealmName
+local C_Container = C_Container
+local C_Bank = C_Bank
+local SendMailNameEditBox = SendMailNameEditBox
+local MailFrame = MailFrame
+local ProfessionsFrame = ProfessionsFrame
+local hooksecurefunc = hooksecurefunc
+local select = select
+local pcall = pcall
+local print = print
+local ipairs = ipairs
+local string = string
+local Enum = Enum
 
 function MCC.InitProfessionUI()
     if not ProfessionsFrame or MCC_SetCraftButton then return end
@@ -251,9 +269,11 @@ end
 -- Events for Inventory
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("BAG_UPDATE")
+eventFrame:RegisterEvent("BAG_UPDATE_DELAYED")
 eventFrame:RegisterEvent("BANKFRAME_OPENED")
 eventFrame:RegisterEvent("PLAYERBANKSLOTS_CHANGED")
--- As of 11.0, Warbank likely triggers BANKFRAME_OPENED or similar when visiting the bank.
+-- Warband bank: fires when any slot changes in an account-wide bank tab
+eventFrame:RegisterEvent("PLAYER_ACCOUNT_BANK_TAB_SLOTS_CHANGED")
 
 -- SECURE HOOK: Capture concentration cost proactively when the user clicks "Craft"
 local function OnCraftRecipeHook(recipeID, count)
@@ -285,26 +305,82 @@ hooksecurefunc(C_TradeSkillUI, "CraftRecipe", OnCraftRecipeHook)
 hooksecurefunc(C_TradeSkillUI, "CraftEnchant", OnCraftRecipeHook)
 
 eventFrame:SetScript("OnEvent", function(self, event, ...)
-    if event == "BAG_UPDATE" then
-        local bagID = ...
-        if bagID and bagID <= 5 then
-            MCC.ScanBags()
-        elseif bagID and bagID >= 13 then
-            MCC.ScanWarbank()
-        end
-    elseif event == "BANKFRAME_OPENED" or event == "PLAYERBANKSLOTS_CHANGED" then
+    if event == "BAG_UPDATE" or event == "BAG_UPDATE_DELAYED" then
+        local bagID = (event == "BAG_UPDATE") and select(1, ...) or nil
+
+        -- Scan bags for any update
         MCC.ScanBags()
-        MCC.ScanWarbank()
+
+        if bagID then
+            if bagID == -1 or bagID == -3 or (bagID >= 6 and bagID <= 12) then
+                if MCC.ScanPersonalBank then MCC.ScanPersonalBank() end
+            elseif bagID >= 13 then
+                if MCC.ScanWarbank then MCC.ScanWarbank() end
+            end
+        else
+            -- Delayed update or scan all
+            if MCC.ScanPersonalBank then MCC.ScanPersonalBank() end
+            if MCC.ScanWarbank then MCC.ScanWarbank() end
+        end
+
+        -- AUTO-ADVANCE logic for Warbank Deposit
+        if MCC.isWorkActive and MCC.workStep == "BUYER_WARBANK_DEPOSIT" then
+            -- We give it half a second for Blizzard's back-end to update inventory
+            C_Timer.After(0.5, function()
+                if MCC.isWorkActive and MCC.workStep == "BUYER_WARBANK_DEPOSIT" then
+                    if MCC.HasRequiredInBags and not MCC.HasRequiredInBags() then
+                        if MCC.ValidateWorkStep then
+                            MCC.Log(MCC.L["Deposit complete. Advancing."] or "Dépôt terminé. Avancement.")
+                            MCC.ValidateWorkStep()
+                        end
+                    end
+                end
+            end)
+        end
+    elseif event == "PLAYER_ACCOUNT_BANK_TAB_SLOTS_CHANGED" then
+        -- Account bank deposits are slow to sync. Wait 1s for the container data.
+        C_Timer.After(1.0, function()
+            if MCC.ScanWarbank then MCC.ScanWarbank() end
+        end)
+    elseif event == "BANKFRAME_OPENED" then
+        MCC.ScanBags()
+        if MCC.ScanPersonalBank then MCC.ScanPersonalBank() end
+        if MCC.ScanWarbank then MCC.ScanWarbank() end
+
+        -- AUTO-ADVANCE: Sync step
+        if MCC.isWorkActive and MCC.workStep == "BUYER_WARBANK_SYNC" then
+            MCC.Log(MCC.L["Bank opened. Data synced."] or "Banque ouverte. Données synchronisées.")
+            if MCC.ValidateWorkStep then MCC.ValidateWorkStep() end
+        end
+    elseif event == "PLAYERBANKSLOTS_CHANGED" then
+        MCC.ScanBags()
+        if MCC.ScanPersonalBank then MCC.ScanPersonalBank() end
+        if MCC.ScanWarbank then MCC.ScanWarbank() end
     end
 end)
 
 -- Mail Integration
 local mailEventFrame = CreateFrame("Frame")
 mailEventFrame:RegisterEvent("MAIL_SHOW")
+mailEventFrame:RegisterEvent("MAIL_CLOSED")
+mailEventFrame:RegisterEvent("MAIL_SEND_SUCCESS")
 
-local function ProcessMail()
-    if not MCC_Config.vendorName or MCC_Config.vendorName == "" then
-        print("MCC: Aucun vendeur configuré. Remplissez le champ 'Vendeur' dans l'interface principale.")
+function MCC.DepositAllWarboundItems()
+    if C_Bank and C_Bank.AutoDepositItemsIntoBank then
+        MCC.Log("MCC: Dépôt via AutoDepositItemsIntoBank(Account)")
+        C_Bank.AutoDepositItemsIntoBank(Enum.BankType.Account)
+    elseif C_Bank and C_Bank.DepositAllWarboundItems then
+        MCC.Log("MCC: Dépôt via DepositAllWarboundItems()")
+        C_Bank.DepositAllWarboundItems()
+    else
+        MCC.Log("|cffff0000MCC Error:|r Aucune API de dépôt Warbank trouvée.")
+    end
+end
+
+function MCC.ProcessMail()
+    local seller = MCC_Config.sellerCharacter
+    if not seller or seller == "" then
+        print("MCC: Aucun vendeur configuré. Veuillez définir un personnage Vendeur dans les paramètres.")
         return
     end
 
@@ -315,29 +391,26 @@ local function ProcessMail()
     -- Identify items to send (Current Crafts)
     local itemsToSend = {}
     for _, metier in ipairs(pdata.metiers) do
-        if metier.currentCraft and metier.craftRecipe then
-            -- We assume the 'currentCraft' Name is what we want, but better:
-            -- The user said "send crafts registered". usually this means the RESULT of the craft.
-            -- My addon tracks INGREDIENTS.
-            -- Wait, if I track ingredients, I don't know the Output Item ID easily unless I stored it.
-            -- The `recipeInfo` in Data.lua has `recipeID`. I might need to get the "Output Item" from the recipe.
-            -- BUT, for now, let's assume the user wants to send the CURRENT CRAFT's OUTPUT.
-            -- Since I don't store the Output Item ID in `metier.currentCraft` (it's just a name),
-            -- I might have to rely on name matching or scanning bags for the name.
-            -- Scanning by name is risky but acceptable for "Send to Vendor".
-
-            -- PLAN B: The user might mean "Send the ingredients I just bought to my crafter".
-            -- "Mon vendeur" implies selling results.
-            -- Let's assume matches by NAME of the current craft.
-
-            if metier.currentCraft then
+        if metier.currentCraft and metier.activeRecipeID then
+            -- Use the helper to get the real resulting item (Scroll for enchants, etc)
+            local itemID = MCC.GetRecipeMaxRankItemID(metier.activeRecipeID)
+            if itemID then
+                local name = C_Item.GetItemInfo(itemID)
+                if name then
+                    itemsToSend[name] = true
+                else
+                    -- Fallback: wait for item info if nil
+                    itemsToSend[metier.currentCraft] = true
+                end
+            else
+                -- Fallback to craft name
                 itemsToSend[metier.currentCraft] = true
             end
         end
     end
 
     -- Set Recipient
-    SendMailNameEditBox:SetText(MCC_Config.vendorName)
+    SendMailNameEditBox:SetText(seller)
 
     -- Scan Bags for items matching the Craft Name
     local mailSlot = 1
@@ -360,14 +433,12 @@ end
 
 mailEventFrame:SetScript("OnEvent", function(self, event)
     if event == "MAIL_SHOW" then
-        if not MCC_MailButton then
-            local btn = CreateFrame("Button", "MCC_MailButton", MailFrame, "UIPanelButtonTemplate")
-            btn:SetSize(120, 22)
-            btn:SetPoint("TOPLEFT", MailFrame, "TOPLEFT", 60, -20)
-            btn:SetText("Envoyer Crafts")
-            btn:SetScript("OnClick", function()
-                ProcessMail()
-            end)
+        -- We no longer create a button in Blizzard's UI as per user request.
+        -- It's now in the Progress UI.
+    elseif event == "MAIL_CLOSED" or event == "MAIL_SEND_SUCCESS" then
+        -- AUTO-ADVANCE: After mailing or closing mail, finish the workflow
+        if MCC.isWorkActive and MCC.workStep == "BUYER_MAIL_TO_SELLER" then
+            if MCC.ValidateWorkStep then MCC.ValidateWorkStep() end
         end
     end
 end)
@@ -376,21 +447,7 @@ end)
 -- Auctionator Integration
 -------------------------------------------------------
 
-function MCC.GetItemPrice(itemID)
-    if not itemID then return 0 end
-
-    -- Try Auctionator API
-    if Auctionator and Auctionator.API and Auctionator.API.v1 then
-        local price = Auctionator.API.v1.GetAuctionPriceByItemID(addonName, itemID)
-        if price and price > 0 then
-            return price
-        end
-    end
-
-    -- Fallback to vendor price
-    local _, _, _, _, _, _, _, _, _, _, vendorPrice = C_Item.GetItemInfo(itemID)
-    return vendorPrice or 0
-end
+-- GetItemPrice is defined in Utils.lua (loaded first)
 
 function MCC.SyncReagentsToWoWUI(playerName, metierIndex)
     if playerName ~= MCC.player then return end -- Only for local player
@@ -426,3 +483,24 @@ function MCC.SyncReagentsToWoWUI(playerName, metierIndex)
     -- Force UI refresh
     schematicForm:OnAllocationsChanged()
 end
+
+-- AUTO-LAUNCH LOGIC
+local autoLaunchFrame = CreateFrame("Frame")
+autoLaunchFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+autoLaunchFrame:SetScript("OnEvent", function(self, event)
+    local pdata = MCC_Config[MCC.player]
+    if pdata and pdata.autoLaunch then
+        C_Timer.After(2.0, function()
+            if not MCC.isWorkActive then
+                MCC.StartWork()
+            end
+            if MCC.ToggleProgressUI then
+                -- Open first, StartWork might already have toggled it if we refine StartWork
+                -- but ToggleProgressUI is safe.
+                if not MCC_ProgressFrame or not MCC_ProgressFrame:IsShown() then
+                    MCC.ToggleProgressUI()
+                end
+            end
+        end)
+    end
+end)

@@ -33,12 +33,6 @@ MCC.UpdateNotes = {
         "Note_03_1",
         "Note_03_2",
         "Note_03_3",
-    },
-    ["1.0"] = {
-        "Note_10_1",
-        "Note_10_2",
-        "Note_10_3",
-        "Note_10_4",
     }
 }
 
@@ -195,6 +189,7 @@ function MCC.ShowHelp()
         { title = MCC.L["Help_2_Title"],       text = MCC.L["Help_2_Text"] },
         { title = MCC.L["Help_3_Title"],       text = MCC.L["Help_3_Text"] },
         { title = MCC.L["Help_4_Title"],       text = MCC.L["Help_4_Text"] },
+        { title = MCC.L["Work, work !"],       text = "|cffff4444" .. MCC.L["Help: Important!"] .. "|r\n" .. MCC.L["Make sure to define your Buyer and Seller characters in the settings tab for the workflow to operate correctly."] },
         { title = MCC.L["Help_Minimap_Title"], text = MCC.L["Help_Minimap_Text"] },
     }
 
