@@ -3,8 +3,9 @@ local addonName, MCC = ...
 -- Expose MCC globally for /run commands and debugging
 _G["MCC"] = MCC
 
--- Global ID for the player
-MCC.player = UnitName("player") .. "-" .. GetRealmName()
+-- Cache global functions for performance
+local GetRealmName = GetRealmName
+local UnitName = UnitName
 
 -- Frame principal pour les events
 local frame = CreateFrame("Frame")
@@ -18,9 +19,31 @@ frame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" then
         local name = ...
         if name == addonName then
-            MCC.version = "1.0"
+            MCC.version = "0.4"
             MCC_Config = MCC_Config or {}
             MCC_Config.Warbank = MCC_Config.Warbank or {}
+
+            -- CLEANUP: Delete stale entries without realm suffixes
+            local currentName = UnitName("player")
+            local currentRealm = GetRealmName():gsub(" ", "")
+            local canonicalKey = currentName .. "-" .. currentRealm
+
+            for key, data in pairs(MCC_Config) do
+                if type(data) == "table" and data.metiers then
+                    if not key:find("-") then
+                        -- If a hyphenated version exists or it's the current player, delete the stale non-hyphenated one
+                        if MCC_Config[key .. "-" .. currentRealm] or key == currentName then
+                            MCC_Config[key] = nil
+                        else
+                            -- No hyphenated version exists yet, but it's a character entry.
+                            -- We'll wait for the next scan to populate the proper key.
+                            data.isCharacter = true
+                        end
+                    else
+                        data.isCharacter = true
+                    end
+                end
+            end
 
             local prof1, prof2 = GetProfessions()
             MCC.RegisterPlayerCraft(MCC.player, { prof1, prof2 })
@@ -36,12 +59,20 @@ frame:SetScript("OnEvent", function(self, event, ...)
                 icon = "Interface\\AddOns\\MyCraftCompanion\\Media\\Logo_Mcc.png",
                 OnClick = function(self, button)
                     if button == "LeftButton" then
-                        MCC.ToggleUI()
+                        if IsShiftKeyDown() then
+                            if MCC.ToggleProgressUI then MCC.ToggleProgressUI() end
+                        else
+                            MCC.ToggleUI()
+                        end
                     end
                 end,
                 OnTooltipShow = function(tooltip)
                     tooltip:AddLine("MyCraftCompanion", 1, 0.85, 0) -- Gold Title
                     tooltip:AddLine(MCC.L["Left Click: Open/Close Interface"], 0.7, 0.7, 0.7)
+                    tooltip:AddLine(
+                        MCC.L["Shift + Left Click: Open Progress Window"] or "Shift + Left Click: Open Progress Window",
+                        0.7,
+                        0.7, 0.7)
                     tooltip:AddLine(MCC.L["Drag: Move Button"], 0.7, 0.7, 0.7)
 
                     -- Session economics
@@ -125,6 +156,13 @@ frame:SetScript("OnEvent", function(self, event, ...)
 
             if MCC.RestoreUISettings then MCC.RestoreUISettings() end
             MCC.CheckVersion()
+
+            -- Auto-launch check
+            if MCC_Config[MCC.player] and MCC_Config[MCC.player].autoLaunch then
+                C_Timer.After(2, function() -- Slight delay after login
+                    if MCC.StartWork then MCC.StartWork() end
+                end)
+            end
 
             print("|c" .. (MCC.Styles and MCC.Styles.Colors.GoldChat or "ffffcc00") .. "MyCraftCompanion|r " ..
                 MCC.version .. " (WoW 12.0.1) " .. (MCC.L["Loaded!"] or "loaded!"))

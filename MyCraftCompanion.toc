@@ -2,7 +2,7 @@
 ## Title: MyCraftCompanion
 ## Notes: Routine de craft par perso et métier
 ## Author: Alexis Leveque
-## Version: 0.3
+## Version: 0.4
 ## SavedVariables: MCC_Config
 
 libs\LibStub.lua
@@ -16,6 +16,7 @@ Core\Utils.lua
 Core\Versioning.lua
 Core\Data.lua
 Core\Integration.lua
+Core\WorkFlow.lua
 
 UI\Main.lua
 UI\Config.lua
@@ -23,5 +24,6 @@ UI\Components\Tooltips.lua
 UI\Components\ReagentLine.lua
 UI\Views\ShoppingList.lua
 UI\Views\FactoryView.lua
+UI\ProgressUI.lua
 
 Core\core.lua

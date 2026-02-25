@@ -43,6 +43,21 @@ function MCC.GetItemNameSafe(itemID)
     return C_Item.GetItemNameByID(itemID) or ("Item " .. itemID)
 end
 
+-- Price lookup: Auctionator first, then vendor fallback
+function MCC.GetItemPrice(itemID)
+    if not itemID then return 0 end
+
+    -- Try Auctionator API
+    if Auctionator and Auctionator.API and Auctionator.API.v1 then
+        local price = Auctionator.API.v1.GetAuctionPriceByItemID(addonName, itemID)
+        if price and price > 0 then return price end
+    end
+
+    -- Fallback: vendor price
+    local _, _, _, _, _, _, _, _, _, _, vendorPrice = C_Item.GetItemInfo(itemID)
+    return vendorPrice or 0
+end
+
 -- SIMPLE DEBUG FRAME
 function MCC.ToggleDebugFrame()
     if not MCC.DebugFrame then

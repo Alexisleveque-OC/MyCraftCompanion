@@ -256,7 +256,7 @@ function MCC.CreatePlayerContent(parent, playerName, pdata, columnIndex)
                 local cap = MCC.GetCraftCapacity(metier)
                 if cap then
                     local colorPrefix = (cap > 0) and "|cff00ff00" or "|cffff0000"
-                    metier.capText:SetText(MCC.L["Cap:"] .. " " .. colorPrefix .. cap .. "|r")
+                    metier.capText:SetText(MCC.L["Cap Max:"] .. " " .. colorPrefix .. cap .. "|r")
                 end
 
                 if metier.activeRecipeID then

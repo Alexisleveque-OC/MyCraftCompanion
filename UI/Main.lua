@@ -138,13 +138,62 @@ function MCC.InitUI()
         if MCC.ConfigFrame:IsShown() then
             MCC.ConfigFrame:Hide()
             MCC.FactoryScroll:Show()
+            if MCC.ShoppingFrame then MCC.ShoppingFrame:Show() end
             cfgText:SetText(MCC.L["Config"] or "Config")
         else
             MCC.ConfigFrame:Show()
             MCC.FactoryScroll:Hide()
+            if MCC.ShoppingFrame then MCC.ShoppingFrame:Show() end -- We'll hide it specifically
             cfgText:SetText(MCC.L["Back"] or "Retour")
+
+            -- New logic: hide shopping list during config
+            if MCC.ShoppingFrame then MCC.ShoppingFrame:Hide() end
         end
     end)
+
+    local workButton = CreateFrame("Button", nil, MCC_UI, "BackdropTemplate")
+    workButton:SetSize(120, 20)
+    workButton:SetPoint("RIGHT", configButton, "LEFT", -10, 0)
+    workButton:SetFrameLevel(MCC_UI:GetFrameLevel() + 100)
+
+    if MCC.Styles then
+        workButton:SetBackdrop(MCC.Styles.Backdrop)
+        workButton:SetBackdropColor(unpack(MCC.Styles.Colors.BgSubtle))
+        workButton:SetBackdropBorderColor(unpack(MCC.Styles.Colors.Gold))
+    end
+
+    local workText = workButton:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    workText:SetPoint("CENTER")
+    if MCC.Styles then
+        workText:SetTextColor(unpack(MCC.Styles.Colors.Gold))
+    end
+
+    function MCC.UpdateWorkButton()
+        if MCC.isWorkActive then
+            if MCC.workStep == "BUYER_COMPLETE" then
+                workText:SetText(MCC.L["Jobs Done !"] or "Jobs Done !")
+                workButton:SetBackdropColor(0.2, 0.8, 0.2, 0.8) -- Green when finished
+            else
+                workText:SetText(MCC.L["Work in progress"] or "Travail en cours")
+                workButton:SetBackdropColor(0.8, 0.8, 0.2, 0.8) -- Yellow during work
+            end
+        else
+            workText:SetText(MCC.L["Work, work !"] or "Work, work !")
+            if MCC.Styles then
+                workButton:SetBackdropColor(unpack(MCC.Styles.Colors.BgSubtle))
+            end
+        end
+    end
+
+    workButton:SetScript("OnClick", function()
+        if MCC.isWorkActive then
+            MCC.StopWork()
+        else
+            MCC.StartWork()
+        end
+    end)
+
+    MCC.UpdateWorkButton()
     helpButton:SetScript("OnEnter", function(self)
         self:SetBackdropColor(0.2, 0.2, 0.2, 0.9)
         self:SetBackdropBorderColor(1, 1, 1, 1)
@@ -226,6 +275,7 @@ function MCC.InitUI()
         shoppingFrame:SetBackdropBorderColor(unpack(MCC.Styles.Colors.Gold))
     end
 
+    MCC.ShoppingFrame = shoppingFrame
     MCC.InitShoppingUI(shoppingFrame) -- Delegate to ShoppingList.lua
 
     MCC_UI:SetScript("OnSizeChanged", function(self, width, height)

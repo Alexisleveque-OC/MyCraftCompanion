@@ -42,7 +42,7 @@ Structurer les persos et centraliser la vision industrielle.
 
 ### UI / UX
 - [x] **Refonte Esthétique** : Bordures modernes et palette cohérente ("Or MCC").
-- [/] **Suppression de recettes** : Bouton d'effacement rapide (✕) ajouté dans l'UI WoW et la Factory View MCC.
+- [x] **Suppression de recettes** : Bouton d'effacement rapide (✕) ajouté dans l'UI WoW et la Factory View MCC.
 - [x] Icônes de rank visibles :
   - [x] Liste des compos dans recipes
   - [x] Shopping list (qualité, tooltip, prix, icônes Atlas)
@@ -55,15 +55,21 @@ Structurer les persos et centraliser la vision industrielle.
 
 ---
 
-# 🟠 PHASE 2.5 – Launch Process
+# 🟠 PHASE 2.5 – Launch Process [/]
 
-## 🎯 Objectif
+## 🎯 Objectif Work, work ! 
 Orchestration complète d’une session industrielle.
 
+### fix
+- [x] Compter correcteemnt les inventaires
+
+### Configuration
+- [x] Définir personnage vendeur
+
 ### Work, work ! (Feature Signature)
-- [!!] Bouton "Work, work !" ou en FR 'Encore du travail ?'
-- [!!] Bouton "Jobs Done !" ou en FR 'Travail terminé !'
-- [!!] Définir si à la connexion le process doit être lancer automatiquement pour ce perso
+- [x] Bouton "Work, work !" ou en FR 'Encore du travail ?'
+- [x] Bouton "Jobs Done !" ou en FR 'Travail terminé !'
+- [x] Définir si à la connexion le process doit être lancer automatiquement pour ce perso
 
 #### Pour le perso Acheteur
 - Analyse de l’HV
@@ -84,7 +90,7 @@ Orchestration complète d’une session industrielle.
 - Craft métier 1 → métier 2
 - Envoi au vendeur
 
-### Que me reste t-il à faire ?
+### "Que me reste t-il à faire ?"
 - [??] Calcul et affichage de la concentration des persos
 - [??] affichage du Cout en concentration du craft
 - [??] affichage dans la toggle des personnages à connecter si potentielle perte de concentration
@@ -92,10 +98,12 @@ Orchestration complète d’une session industrielle.
  - Lors d'un session uniquement 
  - Toujours afficher 
  - Jamais afficher
+- [??] Définir une configuration: utilisé les infos rentré par l'user ou le cap apr la concentration pour calculer la shopping list et les crafts à faire.
 
-### Configuration avancée
-- [??] Banque de guilde personnalisée (nom)
-- [??] Définir personnage vendeur
+### UI/UX
+- [??] définir
+- [??] Une case "Ignorer ce personnage aujourd'hui"
+- [??] Copier la recette depuis un autre personnage
 
 ---
 
@@ -116,7 +124,11 @@ Orchestration complète d’une session industrielle.
     - le first craft  
    - Quel spé et talent séléctionner en premier
    - Ne pas oublier les outils de métier
-   - Ne pas Négliger l'acuité pour créer des outils plus puissant pour le long terme
+   - Ne pas Négliger l'acuité pour créer des outils plus puissant pour le long terme### UI/UX
+- [??] définir
+### UI/UX
+- [!!] **Mode Semi-Automatique workflow** : Option pour activer/désactiver les automatismes spécifiques (ex: choisir de sauter ou non l'étape de dépôt automatiquement).
+  - Ajouter le saut d'étaps auto pour le deposit warbound
 
 ---
 
@@ -146,6 +158,9 @@ Rendre l’addon intelligent sans dépendance externe. l'objectif ici est de fai
 ### Alertes Marché
 - [??] Alerte compos X % moins cher
 - [??] Alerte craft X % plus cher que moyenne
+
+### Configuration avancée
+- [??] Banque de guilde personnalisée (nom) (analyse et alerte si des compos sont en BDG)
 
 ### Auto-fill
 - [??] **Auto-fill reagents** : Insérer automatiquement les compos choisis dans l'UI lors de l'ouverture du métier (si possible) ou bouton toggle.
