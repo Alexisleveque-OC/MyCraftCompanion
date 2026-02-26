@@ -1,27 +1,36 @@
 local addonName, MCC = ...
 local tostring = tostring
-local ipairs = ipairs
 local pairs = pairs
-local string = string
-local table = table
+local ipairs = ipairs
 local type = type
+local CreateFrame = CreateFrame
+local C_Item = C_Item
+local C_Timer = C_Timer
+local C_TradeSkillUI = C_TradeSkillUI
+local C_CurrencyInfo = C_CurrencyInfo
+local UnitName = UnitName
+local GetRealmName = GetRealmName
+local C_Container = C_Container
+local C_Bank = C_Bank
+local SendMailNameEditBox = SendMailNameEditBox
+local MailFrame = MailFrame
+local ProfessionsFrame = ProfessionsFrame
+local hooksecurefunc = hooksecurefunc
+local select = select
+local pcall = pcall
+local print = print
+local string = string
+local Enum = Enum
 local math = math
 local _G = _G
-local CreateFrame = CreateFrame
 local UnitClass = UnitClass
 local IsShiftKeyDown = IsShiftKeyDown
 local GetMoneyString = GetMoneyString
 local C_ClassColor = C_ClassColor
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 local GetProfessions = GetProfessions
-local C_Timer = C_Timer
-
 -- Expose MCC globally for /run commands and debugging
 _G["MCC"] = MCC
-
--- Cache global functions for performance
-local GetRealmName = GetRealmName
-local UnitName = UnitName
 
 -- Frame principal pour les events
 local frame = CreateFrame("Frame")
@@ -168,7 +177,7 @@ frame:SetScript("OnEvent", function(self, event, ...)
                         -- CONCENTRATION ALERTS (Respecting Config)
                         local displayMode = MCC_Config.concentrationDisplayMode or "ALWAYS"
                         local shouldShow = (displayMode == "ALWAYS") or
-                            (displayMode == "SESSION" and MCC.WorkInProgress)
+                            (displayMode == "SESSION" and MCC.isWorkActive)
 
                         local concAlerts = nil
                         if shouldShow and displayMode ~= "NEVER" then

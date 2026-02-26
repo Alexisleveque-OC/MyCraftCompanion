@@ -29,19 +29,20 @@ function MCC.GetMissingIngredients(multiplier)
             -- CRITICAL FIX: Only count hyphenated names to avoid doubling with stale "ShortName" entries
             if playerName:find("-") then
                 for _, metier in ipairs(pdata.metiers or {}) do
-                    local craftQty = tonumber(metier.craftQuantity) or 1
+                    if metier.craftRecipe then
+                        local craftQty = tonumber(metier.craftQuantity) or 1
 
-                    -- NEW: Respect shoppingQuantitySource config
-                    if MCC_Config.shoppingQuantitySource == "CONCENTRATION" then
-                        local currentConc = MCC.GetEstimatedConcentration(metier)
-                        local cost = metier.concentrationCost or 0
-                        if cost > 0 then
-                            craftQty = math.floor(currentConc / cost)
+                        -- NEW: Respect shoppingQuantitySource config
+                        if MCC_Config.shoppingQuantitySource == "CONCENTRATION" then
+                            local currentConc = MCC.GetEstimatedConcentration(metier)
+                            local cost = metier.concentrationCost or 0
+                            if cost > 0 then
+                                craftQty = math.floor(currentConc / cost)
+                            end
                         end
-                    end
 
-                    if craftQty > 0 then
-                        for _, slot in ipairs(metier.craftRecipe) do
+                        if craftQty > 0 then
+                            for _, slot in ipairs(metier.craftRecipe) do
                             if slot.selectedItemID then
                                 local itemID = slot.selectedItemID
                                 local rank = slot.selectedRank or 0
@@ -59,6 +60,7 @@ function MCC.GetMissingIngredients(multiplier)
             end
         end
     end
+end
 
     for key, data in pairs(aggregateDemand) do
         local itemID = data.itemID

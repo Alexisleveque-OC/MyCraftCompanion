@@ -94,11 +94,11 @@ Orchestration complète d’une session industrielle.
 - [x] Calcul et affichage de la concentration des persos (Offline inclus)
 - [x] affichage du Cout en concentration du craft
 - [x] affichage dans la toggle des personnages à connecter si potentielle perte de concentration (Minimap)
-- [??] Configuration pour afficher les infos (dans la toggle) ou non (par défaut à "toujours afficher")
- - Lors d'une session uniquement 
- - Toujours afficher 
- - Jamais afficher
-- [??] Définir une configuration: utilisé les infos rentré par l'user ou le cap par la concentration pour calculer la shopping list et les crafts à faire.
+- [x] Configuration pour afficher les infos (dans la toggle) ou non (par défaut à "toujours afficher")
+  - Lors d'une session uniquement 
+  - Toujours afficher 
+  - Jamais afficher
+- [x] Définir une configuration: utilisé les infos rentré par l'user ou le cap par la concentration pour calculer la shopping list et les crafts à faire.
 
 ### 2.5.5 UI/UX [v0.4.2] [??]
 - [??] pouvoir plier/déplier (masquer la liste des ingrédients mais garder la mardit cap et profit) les recettes dans L'UI pour que ce soit plus lisible. ça permettra d'avoir juste une sélection de recette et voir ce qui est le plus rentable en fonction des composants qu'on aura choisi
