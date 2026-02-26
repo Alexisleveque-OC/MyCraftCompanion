@@ -18,7 +18,56 @@ local ipairs = ipairs
 local string = string
 local Enum = Enum
 
+function MCC.CaptureProfessionData()
+    if not ProfessionsFrame or not ProfessionsFrame:IsShown() then return end
+
+    local baseInfo = C_TradeSkillUI.GetBaseProfessionInfo()
+    local childInfo = C_TradeSkillUI.GetChildProfessionInfo()
+
+    if baseInfo and baseInfo.professionID then
+        MCC.Log("Capture Attempt: BaseID=" ..
+            tostring(baseInfo.professionID) .. " Name=" .. tostring(baseInfo.professionName))
+        if childInfo then
+            MCC.Log("Capture Attempt: ChildID=" ..
+            tostring(childInfo.professionID) .. " Name=" .. tostring(childInfo.professionName))
+        end
+
+        local player = MCC.player
+        if MCC_Config[player] and MCC_Config[player].metiers then
+            for i, m in ipairs(MCC_Config[player].metiers) do
+                -- Compare names to find the right slot (localized)
+                if m.name == baseInfo.professionName or (childInfo and m.name == childInfo.professionName) then
+                    -- Priority to ChildID (Extension specific like Khaz Algar)
+                    local targetID = (childInfo and childInfo.professionID) or baseInfo.professionID
+                    local currencyID = C_TradeSkillUI.GetConcentrationCurrencyID(targetID)
+
+                    -- Fallback to BaseID if ChildID failed
+                    if (not currencyID or currencyID == 0) and childInfo then
+                        currencyID = C_TradeSkillUI.GetConcentrationCurrencyID(baseInfo.professionID)
+                    end
+
+                    if currencyID and currencyID > 0 then
+                        if m.concentrationCurrencyID ~= currencyID then
+                            m.concentrationCurrencyID = currencyID
+                            MCC.Log("Captured NEW CurrencyID: " ..
+                                currencyID .. " for " .. m.name .. " (TargetID: " .. targetID .. ")")
+                        end
+                        -- Always refresh values when UI is open
+                        MCC.UpdatePlayerConcentration()
+                        if MCC.RenderMCCUI then MCC.RenderMCCUI() end
+                    else
+                        MCC.Log("Capture info: No CurrencyID discovered yet for " .. m.name)
+                    end
+                end
+            end
+        end
+    end
+end
+
 function MCC.InitProfessionUI()
+    -- Data capture should happen every time Init is called (which is on TRADE_SKILL_SHOW)
+    MCC.CaptureProfessionData()
+
     if not ProfessionsFrame or MCC_SetCraftButton then return end
 
     local parent = ProfessionsFrame.CraftingPage

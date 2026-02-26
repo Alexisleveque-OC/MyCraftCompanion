@@ -11,6 +11,7 @@ local UnitName = UnitName
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("TRADE_SKILL_SHOW")
+frame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 
 -- Event handler
 frame:SetScript("OnEvent", function(self, event, ...)
@@ -147,6 +148,34 @@ frame:SetScript("OnEvent", function(self, event, ...)
                                 )
                             end
                         end
+
+                        -- CONCENTRATION ALERTS
+                        local concAlerts = MCC.GetCappingCharacters and MCC.GetCappingCharacters()
+                        if concAlerts and #concAlerts > 0 then
+                            tooltip:AddLine(" ")
+                            tooltip:AddLine("|cff00ff00" ..
+                                (MCC.L["PRÊT À CRAFTER (CAP MAX)"] or "PRÊT À CRAFTER (CAP MAX)") .. "|r")
+                            for _, alert in ipairs(concAlerts) do
+                                local colorStr = "|cffffffff"
+                                if alert.class then
+                                    local c = (C_ClassColor and C_ClassColor.GetClassColor) and
+                                        C_ClassColor.GetClassColor(alert.class) or RAID_CLASS_COLORS[alert.class]
+                                    if c then
+                                        if c.WrapTextInColorCode then
+                                            colorStr = string.format("|cff%02x%02x%02x", c.r * 255, c.g * 255, c.b * 255)
+                                        else
+                                            colorStr = string.format("|cff%02x%02x%02x", c.r * 255, c.g * 255, c.b * 255)
+                                        end
+                                    end
+                                end
+                                tooltip:AddDoubleLine(
+                                    colorStr .. alert.player .. "|r",
+                                    "|cffff4444" ..
+                                    (alert.metier or "Unknown") ..
+                                    " (" .. alert.concentration .. "/" .. alert.max .. ")|r"
+                                )
+                            end
+                        end
                     end
                 end,
             })
@@ -169,8 +198,14 @@ frame:SetScript("OnEvent", function(self, event, ...)
         end
     elseif event == "TRADE_SKILL_SHOW" then
         C_Timer.After(0, function()
+            local prof1, prof2 = GetProfessions()
+            MCC.RegisterPlayerCraft(MCC.player, { prof1, prof2 })
+            MCC.UpdatePlayerConcentration()
             MCC.InitProfessionUI()
         end)
+    elseif event == "CURRENCY_DISPLAY_UPDATE" then
+        MCC.UpdatePlayerConcentration()
+        if MCC.RenderMCCUI then MCC.RenderMCCUI() end
     end
 end)
 

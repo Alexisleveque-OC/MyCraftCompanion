@@ -95,6 +95,20 @@ function MCC.CreatePlayerContent(parent, playerName, pdata, columnIndex)
         m:SetPoint("TOPLEFT", 10, y)
         m:SetText(metier.name)
 
+        local currentConc = MCC.GetEstimatedConcentration(metier)
+        if currentConc and metier.concentrationMax then
+            local conc = column:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            conc:SetPoint("TOPRIGHT", -15, y)
+            local percent = currentConc / metier.concentrationMax
+            local color = "00ff00" -- Green
+            if percent >= 0.9 then
+                color = "ff4444"   -- Red (Alert Cap)
+            elseif percent >= 0.7 then
+                color = "ffff00"   -- Yellow
+            end
+            conc:SetText("|cff" .. color .. currentConc .. "|r/" .. metier.concentrationMax)
+        end
+
         y = y - 16
 
         local craftDropdown = CreateFrame("Frame", "MCC_CraftDropDown_" .. playerName .. "_" .. metierIndex, column,
@@ -253,11 +267,23 @@ function MCC.CreatePlayerContent(parent, playerName, pdata, columnIndex)
                 local outputQty = metier.outputQty or 1
                 local bestItemID = metier.outputItemID
 
-                local cap = MCC.GetCraftCapacity(metier)
-                if cap then
-                    local colorPrefix = (cap > 0) and "|cff00ff00" or "|cffff0000"
-                    metier.capText:SetText(MCC.L["Cap Max:"] .. " " .. colorPrefix .. cap .. "|r")
+                local capMax = MCC.GetCraftCapacity(metier)
+                local capAvailable = MCC.GetAvailableCraftCapacity(metier)
+
+                local concCostStr = ""
+                if metier.concentrationCost and metier.concentrationCost > 0 then
+                    concCostStr = " | |cffaaafffC: " .. metier.concentrationCost .. "|r"
                 end
+
+                local capText = ""
+                if capMax then
+                    capText = MCC.L["Cap Max:"] .. " " .. capMax
+                end
+                if capAvailable then
+                    local colorPrefix = (capAvailable > 0) and "|cff00ff00" or "|cffff0000"
+                    capText = capText .. " | |cffaaaaaaDispo:|r " .. colorPrefix .. capAvailable .. "|r"
+                end
+                metier.capText:SetText(capText .. concCostStr)
 
                 if metier.activeRecipeID then
                     bestItemID = MCC.GetRecipeMaxRankItemID(metier.activeRecipeID) or bestItemID
@@ -274,7 +300,6 @@ function MCC.CreatePlayerContent(parent, playerName, pdata, columnIndex)
                         local saleStr = GetMoneyString(totalSale, true)
                         local profitStr = (profit >= 0 and "+" or "-") .. GetMoneyString(math.abs(profit), true)
 
-                        -- Shorter labels to fit in the column
                         metier.saleText:SetText("|cffffcc00V:|r " ..
                             saleStr .. " | " .. profitColor .. "P: " .. profitStr .. "|r")
                     else

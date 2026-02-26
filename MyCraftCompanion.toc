@@ -2,7 +2,7 @@
 ## Title: MyCraftCompanion
 ## Notes: Routine de craft par perso et métier
 ## Author: Alexis Leveque
-## Version: 0.4
+## Version: 0.4.1
 ## SavedVariables: MCC_Config
 
 libs\LibStub.lua

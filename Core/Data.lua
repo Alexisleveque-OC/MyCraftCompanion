@@ -90,7 +90,7 @@ function MCC.RegisterPlayerCraft(playerName, professions)
         if prof then
             local _, classFile = UnitClass("player")
             MCC_Config[playerName].class = classFile
-            local name, _, rank, maxRank = GetProfessionInfo(prof)
+            local name, _, rank, maxRank, _, _, skillLine = GetProfessionInfo(prof)
             MCC_Config[playerName].metiers[i] = MCC_Config[playerName].metiers[i] or {}
             MCC_Config[playerName].metiers[i].name = name
             -- Tracked per métier
@@ -98,16 +98,50 @@ function MCC.RegisterPlayerCraft(playerName, professions)
             MCC_Config[playerName].metiers[i].savedSchematics = MCC_Config[playerName].metiers[i].savedSchematics or {}
 
             -- Concentration Trackers
-            MCC_Config[playerName].metiers[i].concentration = MCC_Config[playerName].metiers[i].concentration or 0
-            MCC_Config[playerName].metiers[i].concentrationMax = MCC_Config[playerName].metiers[i].concentrationMax or
-                1000
-            MCC_Config[playerName].metiers[i].lastUpdate = MCC_Config[playerName].metiers[i].lastUpdate or time()
-            MCC_Config[playerName].metiers[i].concentrationCurrencyID = MCC_Config[playerName].metiers[i]
-                .concentrationCurrencyID or nil
+            local currencyID = C_TradeSkillUI.GetConcentrationCurrencyID(skillLine)
+            MCC_Config[playerName].metiers[i].concentrationCurrencyID = currencyID
+            MCC.Log("Register: Prof=" ..
+                (name or "nil") .. " SkillLine=" .. (skillLine or "nil") .. " CurrencyID=" .. (currencyID or "nil"))
+
+            if currencyID then
+                local currencyInfo = C_CurrencyInfo.GetCurrencyInfo(currencyID)
+                if currencyInfo then
+                    MCC_Config[playerName].metiers[i].concentration = currencyInfo.quantity or 0
+                    MCC_Config[playerName].metiers[i].concentrationMax = currencyInfo.maxQuantity or 1000
+                    MCC.Log("Register: Conc=" ..
+                        (currencyInfo.quantity or 0) .. "/" .. (currencyInfo.maxQuantity or 1000))
+                else
+                    MCC.Log("Register: CurrencyInfo NIL for " .. currencyID)
+                end
+            end
+            MCC_Config[playerName].metiers[i].lastUpdate = time()
         end
     end
 
     MCC.Log((MCC.L["Character registered: "] or "Character registered: ") .. playerName)
+end
+
+function MCC.UpdatePlayerConcentration()
+    local player = MCC.player
+    if not MCC_Config[player] or not MCC_Config[player].metiers then return end
+
+    for i, metier in ipairs(MCC_Config[player].metiers) do
+        local currencyID = metier.concentrationCurrencyID
+        if currencyID then
+            local currencyInfo = C_CurrencyInfo.GetCurrencyInfo(currencyID)
+            if currencyInfo then
+                metier.concentration = currencyInfo.quantity or 0
+                metier.concentrationMax = currencyInfo.maxQuantity or 1000
+                metier.lastUpdate = time()
+                MCC.Log("Update: Metier=" ..
+                    (metier.name or i) .. " Conc=" .. metier.concentration .. "/" .. metier.concentrationMax)
+            else
+                MCC.Log("Update: CurrencyInfo NIL for " .. (metier.name or i) .. " (ID: " .. tostring(currencyID) .. ")")
+            end
+        else
+            MCC.Log("Update: No CurrencyID for metier " .. (metier.name or i))
+        end
+    end
 end
 
 function MCC.SetCurrentCraft(playerName, metierIndex, recipe, concCost, uiReagents)
@@ -243,8 +277,51 @@ end
 
 -- Calculation Helpers
 function MCC.GetEstimatedConcentration(metier)
-    -- Simplified: Assume 1000 max as requested
-    return 1000
+    local lastConc = metier.concentration or 0
+    local maxConc = metier.concentrationMax or 1000
+    local lastUpdate = metier.lastUpdate or time()
+
+    -- 10 points per hour = 10 / 3600 points per second
+    local diffSeconds = time() - lastUpdate
+    if diffSeconds <= 0 then return lastConc end
+
+    local earned = math.floor(diffSeconds * (10 / 3600))
+    return math.min(maxConc, lastConc + earned)
+end
+
+function MCC.GetCappingCharacters()
+    local alerts = {}
+    for playerName, pdata in pairs(MCC_Config) do
+        if type(pdata) == "table" and pdata.metiers then
+            for _, metier in ipairs(pdata.metiers or {}) do
+                if metier.concentrationCurrencyID then
+                    local current = MCC.GetEstimatedConcentration(metier)
+                    local max = metier.concentrationMax or 1000
+
+                    -- Dynamic threshold: enough concentration to perform the "Cap Max"
+                    local cost = metier.concentrationCost or 0
+                    local threshold = max * 0.95 -- Default 95%
+
+                    if cost > 0 then
+                        local capMax = math.floor(max / cost)
+                        threshold = capMax * cost
+                    end
+
+                    if current >= threshold then
+                        table.insert(alerts, {
+                            player = playerName,
+                            metier = metier.name,
+                            concentration = current,
+                            max = max,
+                            class = pdata.class,
+                            ready = true
+                        })
+                    end
+                end
+            end
+        end
+    end
+    return alerts
 end
 
 -- Internal mapping for Enchants that don't return an ItemID via Blizzard APIs
@@ -367,6 +444,14 @@ function MCC.GetRecipeMaxRankItemID(recipeID)
 end
 
 function MCC.GetCraftCapacity(metier)
+    local maxConc = metier.concentrationMax or 1000
+    local cost = metier.concentrationCost or 0
+    if cost <= 0 then return nil end
+
+    return math.floor(maxConc / cost)
+end
+
+function MCC.GetAvailableCraftCapacity(metier)
     local current = MCC.GetEstimatedConcentration(metier)
     local cost = metier.concentrationCost or 0
     if cost <= 0 then return nil end
