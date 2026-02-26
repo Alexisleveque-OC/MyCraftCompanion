@@ -1,4 +1,10 @@
 local addonName, MCC = ...
+local tostring = tostring
+local pairs = pairs
+local ipairs = ipairs
+local type = type
+local C_TradeSkillUI = C_TradeSkillUI
+local C_CurrencyInfo = C_CurrencyInfo
 local CreateFrame = CreateFrame
 local C_Item = C_Item
 local C_Timer = C_Timer
@@ -29,7 +35,7 @@ function MCC.CaptureProfessionData()
             tostring(baseInfo.professionID) .. " Name=" .. tostring(baseInfo.professionName))
         if childInfo then
             MCC.Log("Capture Attempt: ChildID=" ..
-            tostring(childInfo.professionID) .. " Name=" .. tostring(childInfo.professionName))
+                tostring(childInfo.professionID) .. " Name=" .. tostring(childInfo.professionName))
         end
 
         local player = MCC.player

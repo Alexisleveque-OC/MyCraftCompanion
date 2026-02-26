@@ -1,4 +1,14 @@
 local _, MCC = ...
+local CreateFrame = CreateFrame
+local UIDropDownMenu_SetWidth = UIDropDownMenu_SetWidth
+local UIDropDownMenu_Initialize = UIDropDownMenu_Initialize
+local UIDropDownMenu_AddButton = UIDropDownMenu_AddButton
+local UIDropDownMenu_CreateInfo = UIDropDownMenu_CreateInfo
+local UIDropDownMenu_SetText = UIDropDownMenu_SetText
+local type = type
+local pairs = pairs
+local ipairs = ipairs
+local table = table
 
 -- NEW: Function to build the settings UI inside the main addon window
 function MCC.CreateSettingsUI(parent)
@@ -157,7 +167,86 @@ function MCC.CreateSettingsUI(parent)
         self:SetChecked(MCC_Config.showStartScreen or false)
     end)
 
+    -- 5. Concentration Minimap Display
+    local concLabel = container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    concLabel:SetPoint("TOPLEFT", startScreen, "BOTTOMLEFT", -20, -20)
+    concLabel:SetText(MCC.L["Concentration Display (Minimap)"] or "Concentration Display (Minimap)")
 
+    local concDesc = container:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    concDesc:SetPoint("TOPLEFT", concLabel, "BOTTOMLEFT", 0, -5)
+    concDesc:SetText(MCC.L["How to display concentration alerts in the minimap tooltip."] or
+        "How to display concentration alerts in the minimap tooltip.")
+
+    local concDropdown = CreateFrame("Frame", "MCC_ConcDisplayDropDown", container, "UIDropDownMenuTemplate")
+    concDropdown:SetPoint("TOPLEFT", concDesc, "BOTTOMLEFT", -15, -5)
+    UIDropDownMenu_SetWidth(concDropdown, 200)
+
+    local function RefreshConcDropdownText()
+        local current = MCC_Config.concentrationDisplayMode or "ALWAYS"
+        local label = MCC.L["Always Show"]
+        if current == "SESSION" then
+            label = MCC.L["During Session Only"]
+        elseif current == "NEVER" then
+            label = MCC.L["Never Show"]
+        end
+        UIDropDownMenu_SetText(concDropdown, label)
+    end
+
+    UIDropDownMenu_Initialize(concDropdown, function(self, level)
+        local options = {
+            { text = MCC.L["Always Show"],         value = "ALWAYS" },
+            { text = MCC.L["During Session Only"], value = "SESSION" },
+            { text = MCC.L["Never Show"],          value = "NEVER" },
+        }
+        for _, opt in ipairs(options) do
+            local info = UIDropDownMenu_CreateInfo()
+            info.text = opt.text
+            info.func = function()
+                MCC_Config.concentrationDisplayMode = opt.value
+                RefreshConcDropdownText()
+            end
+            UIDropDownMenu_AddButton(info)
+        end
+    end)
+    RefreshConcDropdownText()
+
+    -- 6. Shopping List Source
+    local shopLabel = container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    shopLabel:SetPoint("TOPLEFT", concDropdown, "BOTTOMLEFT", 15, -20)
+    shopLabel:SetText(MCC.L["Shopping List Quantity Source"] or "Shopping List Quantity Source")
+
+    local shopDesc = container:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    shopDesc:SetPoint("TOPLEFT", shopLabel, "BOTTOMLEFT", 0, -5)
+    shopDesc:SetText(MCC.L["Select how the quantity to craft/buy is determined."] or
+        "Select how the quantity to craft/buy is determined.")
+
+    local shopDropdown = CreateFrame("Frame", "MCC_ShopSourceDropDown", container, "UIDropDownMenuTemplate")
+    shopDropdown:SetPoint("TOPLEFT", shopDesc, "BOTTOMLEFT", -15, -5)
+    UIDropDownMenu_SetWidth(shopDropdown, 200)
+
+    local function RefreshShopDropdownText()
+        local current = MCC_Config.shoppingQuantitySource or "MANUAL"
+        local label = MCC.L["Manual Quantity (User Input)"]
+        if current == "CONCENTRATION" then label = MCC.L["Concentration Cap (Automatic)"] end
+        UIDropDownMenu_SetText(shopDropdown, label)
+    end
+
+    UIDropDownMenu_Initialize(shopDropdown, function(self, level)
+        local options = {
+            { text = MCC.L["Manual Quantity (User Input)"],  value = "MANUAL" },
+            { text = MCC.L["Concentration Cap (Automatic)"], value = "CONCENTRATION" },
+        }
+        for _, opt in ipairs(options) do
+            local info = UIDropDownMenu_CreateInfo()
+            info.text = opt.text
+            info.func = function()
+                MCC_Config.shoppingQuantitySource = opt.value
+                RefreshShopDropdownText()
+            end
+            UIDropDownMenu_AddButton(info)
+        end
+    end)
+    RefreshShopDropdownText()
 
     return container
 end

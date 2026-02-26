@@ -3,6 +3,16 @@ local GetRealmName = GetRealmName
 local UnitName = UnitName
 local Enum = Enum
 local C_Container = C_Container
+local C_CurrencyInfo = C_CurrencyInfo
+local C_TradeSkillUI = C_TradeSkillUI
+local ipairs = ipairs
+local pairs = pairs
+local next = next
+local type = type
+local tostring = tostring
+local time = time
+local math = math
+local table = table
 
 -- CONSISTENT PLAYER KEY: Used across the addon to group data
 -- Initialized in Data.lua for load order safety.
@@ -19,8 +29,18 @@ function MCC.GetMissingIngredients(multiplier)
             -- CRITICAL FIX: Only count hyphenated names to avoid doubling with stale "ShortName" entries
             if playerName:find("-") then
                 for _, metier in ipairs(pdata.metiers or {}) do
-                    if metier.currentCraft and metier.craftRecipe then
-                        local craftQty = tonumber(metier.craftQuantity) or 1
+                    local craftQty = tonumber(metier.craftQuantity) or 1
+
+                    -- NEW: Respect shoppingQuantitySource config
+                    if MCC_Config.shoppingQuantitySource == "CONCENTRATION" then
+                        local currentConc = MCC.GetEstimatedConcentration(metier)
+                        local cost = metier.concentrationCost or 0
+                        if cost > 0 then
+                            craftQty = math.floor(currentConc / cost)
+                        end
+                    end
+
+                    if craftQty > 0 then
                         for _, slot in ipairs(metier.craftRecipe) do
                             if slot.selectedItemID then
                                 local itemID = slot.selectedItemID

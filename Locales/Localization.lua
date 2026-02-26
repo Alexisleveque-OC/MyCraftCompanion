@@ -136,6 +136,18 @@ if locale == "frFR" then
     "Affiche l'écran 'Du travail, encore du travail !' au démarrage et attend un clic."
     L["Collapse Ingredients"] = "Réduire les ingrédients"
     L["Expand Ingredients"] = "Afficher les ingrédients"
+    L["Concentration Display (Minimap)"] = "Affichage Concentration (Minimap)"
+    L["How to display concentration alerts in the minimap tooltip."] =
+    "Comment afficher les alertes de concentration dans le tooltip de la minimap."
+    L["Always Show"] = "Toujours afficher"
+    L["During Session Only"] = "En session uniquement"
+    L["Never Show"] = "Ne jamais afficher"
+    L["Shopping List Quantity Source"] = "Source de quantité Shopping List"
+    L["Select how the quantity to craft/buy is determined."] =
+    "Sélectionnez comment la quantité à crafter/acheter est déterminée."
+    L["Manual Quantity (User Input)"] = "Quantité Manuelle (Saisie utilisateur)"
+    L["Concentration Cap (Automatic)"] = "Cap Concentration (Automatique)"
+    L["PRÊT À CRAFTER (CAP MAX)"] = "PRÊT À CRAFTER (CAP MAX)"
 else
     -- English Translations (Explicit for clarity, though fallback works)
     L["Shopping List (Total Ingredients)"] = "Shopping List (Total Ingredients)"
@@ -261,6 +273,17 @@ else
     "Display the 'Work, work !' screen at the start and wait for a click."
     L["Collapse Ingredients"] = "Collapse Ingredients"
     L["Expand Ingredients"] = "Expand Ingredients"
+    L["Concentration Display (Minimap)"] = "Concentration Display (Minimap)"
+    L["How to display concentration alerts in the minimap tooltip."] =
+    "How to display concentration alerts in the minimap tooltip."
+    L["Always Show"] = "Always Show"
+    L["During Session Only"] = "During Session Only"
+    L["Never Show"] = "Never Show"
+    L["Shopping List Quantity Source"] = "Shopping List Quantity Source"
+    L["Select how the quantity to craft/buy is determined."] = "Select how the quantity to craft/buy is determined."
+    L["Manual Quantity (User Input)"] = "Manual Quantity (User Input)"
+    L["Concentration Cap (Automatic)"] = "Concentration Cap (Automatic)"
+    L["PRÊT À CRAFTER (CAP MAX)"] = "READY TO CRAFT (MAX CAP)"
 end
 
 MCC.L = L

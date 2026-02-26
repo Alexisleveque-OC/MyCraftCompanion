@@ -1,4 +1,20 @@
 local addonName, MCC = ...
+local tostring = tostring
+local ipairs = ipairs
+local pairs = pairs
+local string = string
+local table = table
+local type = type
+local math = math
+local _G = _G
+local CreateFrame = CreateFrame
+local UnitClass = UnitClass
+local IsShiftKeyDown = IsShiftKeyDown
+local GetMoneyString = GetMoneyString
+local C_ClassColor = C_ClassColor
+local RAID_CLASS_COLORS = RAID_CLASS_COLORS
+local GetProfessions = GetProfessions
+local C_Timer = C_Timer
 
 -- Expose MCC globally for /run commands and debugging
 _G["MCC"] = MCC
@@ -149,8 +165,16 @@ frame:SetScript("OnEvent", function(self, event, ...)
                             end
                         end
 
-                        -- CONCENTRATION ALERTS
-                        local concAlerts = MCC.GetCappingCharacters and MCC.GetCappingCharacters()
+                        -- CONCENTRATION ALERTS (Respecting Config)
+                        local displayMode = MCC_Config.concentrationDisplayMode or "ALWAYS"
+                        local shouldShow = (displayMode == "ALWAYS") or
+                            (displayMode == "SESSION" and MCC.WorkInProgress)
+
+                        local concAlerts = nil
+                        if shouldShow and displayMode ~= "NEVER" then
+                            concAlerts = MCC.GetCappingCharacters and MCC.GetCappingCharacters()
+                        end
+
                         if concAlerts and #concAlerts > 0 then
                             tooltip:AddLine(" ")
                             tooltip:AddLine("|cff00ff00" ..

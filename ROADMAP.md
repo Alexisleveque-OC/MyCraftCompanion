@@ -90,7 +90,7 @@ Orchestration complète d’une session industrielle.
 - Craft métier 1 → métier 2
 - Envoi au vendeur
 
-### 2.5.4 "Que me reste t-il à faire ?" [v0.4.1] [/]
+### 2.5.4 "Que me reste t-il à faire ?" [v0.4.1] [x]
 - [x] Calcul et affichage de la concentration des persos (Offline inclus)
 - [x] affichage du Cout en concentration du craft
 - [x] affichage dans la toggle des personnages à connecter si potentielle perte de concentration (Minimap)
