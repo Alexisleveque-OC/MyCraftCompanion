@@ -263,7 +263,7 @@ function MCC.CreatePlayerContent(parent, playerName, pdata, columnIndex)
 
             function MCC.RefreshLocalProfit(metier, playerName)
                 if not metier or not metier.saleText then return end
-                local craftQty = tonumber(metier.craftQuantity) or 1
+                local craftQty = MCC.GetEffectiveCraftQuantity(metier)
                 local outputQty = metier.outputQty or 1
                 local bestItemID = metier.outputItemID
 
@@ -399,7 +399,9 @@ function MCC.RenderMCCUI()
     frames.HeaderScrollingFrame:SetSize(totalWidth, 80)
 
     local frameWidth = frames.HeaderClip:GetWidth()
-    if totalWidth > frameWidth then
+    local showSlider = totalWidth > frameWidth and (not frames.ConfigFrame or not frames.ConfigFrame:IsShown())
+
+    if showSlider then
         frames.HSlider:SetMinMaxValues(0, totalWidth - frameWidth)
         frames.HSlider:Show()
     else

@@ -148,6 +148,8 @@ if locale == "frFR" then
     L["Manual Quantity (User Input)"] = "Quantité Manuelle (Saisie utilisateur)"
     L["Concentration Cap (Automatic)"] = "Cap Concentration (Automatique)"
     L["PRÊT À CRAFTER (CAP MAX)"] = "PRÊT À CRAFTER (CAP MAX)"
+    L["Shopping_List_Source_Note"] =
+    "|cffff9900Note :|r Les calculs de profits et les quantités d'ingrédients s'adaptent automatiquement à cette source."
 else
     -- English Translations (Explicit for clarity, though fallback works)
     L["Shopping List (Total Ingredients)"] = "Shopping List (Total Ingredients)"
@@ -284,6 +286,8 @@ else
     L["Manual Quantity (User Input)"] = "Manual Quantity (User Input)"
     L["Concentration Cap (Automatic)"] = "Concentration Cap (Automatic)"
     L["PRÊT À CRAFTER (CAP MAX)"] = "READY TO CRAFT (MAX CAP)"
+    L["Shopping_List_Source_Note"] =
+    "|cffff9900Note:|r Profit calculations and ingredient quantities automatically adapt to this source."
 end
 
 MCC.L = L

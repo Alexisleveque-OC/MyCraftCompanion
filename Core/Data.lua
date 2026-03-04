@@ -30,29 +30,22 @@ function MCC.GetMissingIngredients(multiplier)
             if playerName:find("-") then
                 for _, metier in ipairs(pdata.metiers or {}) do
                     if metier.craftRecipe then
-                        local craftQty = tonumber(metier.craftQuantity) or 1
-
-                        -- NEW: Respect shoppingQuantitySource config
-                        if MCC_Config.shoppingQuantitySource == "CONCENTRATION" then
-                            local currentConc = MCC.GetEstimatedConcentration(metier)
-                            local cost = metier.concentrationCost or 0
-                            if cost > 0 then
-                                craftQty = math.floor(currentConc / cost)
-                            end
-                        end
+                        -- NEW: Use effective quantity helper
+                        local craftQty = MCC.GetEffectiveCraftQuantity(metier)
 
                         if craftQty > 0 then
                             for _, slot in ipairs(metier.craftRecipe) do
-                            if slot.selectedItemID then
-                                local itemID = slot.selectedItemID
-                                local rank = slot.selectedRank or 0
-                                local key = itemID .. "-" .. rank
-                                local totalQty = (slot.quantity or 0) * craftQty
+                                if slot.selectedItemID then
+                                    local itemID = slot.selectedItemID
+                                    local rank = slot.selectedRank or 0
+                                    local key = itemID .. "-" .. rank
+                                    local totalQty = (slot.quantity or 0) * craftQty
 
-                                if not aggregateDemand[key] then
-                                    aggregateDemand[key] = { itemID = itemID, rank = slot.selectedRank, quantity = 0 }
+                                    if not aggregateDemand[key] then
+                                        aggregateDemand[key] = { itemID = itemID, rank = slot.selectedRank, quantity = 0 }
+                                    end
+                                    aggregateDemand[key].quantity = aggregateDemand[key].quantity + totalQty
                                 end
-                                aggregateDemand[key].quantity = aggregateDemand[key].quantity + totalQty
                             end
                         end
                     end
@@ -60,7 +53,6 @@ function MCC.GetMissingIngredients(multiplier)
             end
         end
     end
-end
 
     for key, data in pairs(aggregateDemand) do
         local itemID = data.itemID
@@ -400,6 +392,54 @@ MCC.CraftingDataMap = {
     [1660] = 223796,
     [1661] = 223784,
     [2447] = 223665,
+    -- Midnight
+    [3758] = 243377,
+    [3795] = 243947,
+    [3796] = 243949,
+    [3797] = 243951,
+    [3798] = 243953,
+    [3799] = 243955,
+    [3800] = 243957,
+    [3801] = 243959,
+    [3802] = 243961,
+    [3803] = 243963,
+    [3804] = 243965,
+    [3805] = 243967,
+    [3806] = 243969,
+    [3807] = 243971,
+    [3808] = 243973,
+    [3809] = 243975,
+    [3810] = 243977,
+    [3811] = 243979,
+    [3812] = 243981,
+    [3813] = 243983,
+    [3814] = 243985,
+    [3815] = 243987,
+    [3816] = 243989,
+    [3817] = 243991,
+    [3818] = 243993,
+    [3819] = 243994,
+    [3820] = 243997,
+    [3821] = 243999,
+    [3822] = 244001,
+    [3823] = 244003,
+    [3824] = 244005,
+    [3825] = 244007,
+    [3826] = 244009,
+    [3827] = 244011,
+    [3828] = 244013,
+    [3829] = 244015,
+    [3830] = 244017,
+    [3831] = 244019,
+    [3832] = 244021,
+    [3833] = 244023,
+    [3834] = 244025,
+    [3835] = 244027,
+    [3836] = 244028,
+    [3837] = 244031,
+    [3838] = 244033,
+    [3839] = 244035,
+    [3840] = 244037,
 }
 
 function MCC.GetRecipeMaxRankItemID(recipeID)
@@ -481,6 +521,15 @@ function MCC.GetAvailableCraftCapacity(metier)
     return math.floor(current / cost)
 end
 
+function MCC.GetEffectiveCraftQuantity(metier)
+    local currentSource = MCC_Config.shoppingQuantitySource or "MANUAL"
+    if currentSource == "CONCENTRATION" then
+        return MCC.GetAvailableCraftCapacity(metier) or 0
+    else
+        return tonumber(metier.craftQuantity) or 1
+    end
+end
+
 function MCC.GetSessionEconomics(multiplier)
     multiplier = multiplier or (MCC_Config and MCC_Config.shoppingMargin) or 1.0
 
@@ -492,7 +541,7 @@ function MCC.GetSessionEconomics(multiplier)
         if type(pdata) == "table" and pdata.isCharacter then
             for _, metier in ipairs(pdata.metiers or {}) do
                 if metier.currentCraft and metier.craftRecipe then
-                    local craftQty = tonumber(metier.craftQuantity) or 1
+                    local craftQty = MCC.GetEffectiveCraftQuantity(metier)
                     for _, slot in ipairs(metier.craftRecipe) do
                         if slot.selectedItemID then
                             local qtyPerCraft = slot.quantity or 0
@@ -559,7 +608,7 @@ function MCC.GetSessionProfit(multiplier)
         if type(pdata) == "table" then
             for _, metier in ipairs(pdata.metiers or {}) do
                 if metier.currentCraft then
-                    local craftQty = (tonumber(metier.craftQuantity) or 1) * (multiplier or 1)
+                    local craftQty = MCC.GetEffectiveCraftQuantity(metier) * (multiplier or 1)
                     local outputQty = metier.outputQty or 1
                     local bestItemID = metier.outputItemID
 

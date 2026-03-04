@@ -139,8 +139,9 @@ frame:SetScript("OnEvent", function(self, event, ...)
                     if pdata and pdata.metiers then
                         local activeCrafts = {}
                         for _, metier in ipairs(pdata.metiers) do
-                            if metier.currentCraft and (tonumber(metier.craftQuantity) or 0) > 0 then
-                                table.insert(activeCrafts, metier)
+                            local craftQty = MCC.GetEffectiveCraftQuantity(metier)
+                            if metier.currentCraft and (craftQty or 0) > 0 then
+                                table.insert(activeCrafts, { metier = metier, qty = craftQty })
                             end
                         end
 
@@ -165,11 +166,11 @@ frame:SetScript("OnEvent", function(self, event, ...)
                                 end
                             end
 
-                            for _, metier in ipairs(activeCrafts) do
+                            for _, item in ipairs(activeCrafts) do
                                 tooltip:AddDoubleLine(
                                     "  " .. displayPlayer,
                                     "|cffffffff" ..
-                                    (metier.currentCraft or "Unknown") .. " x" .. (metier.craftQuantity or 1) .. "|r"
+                                    (item.metier.currentCraft or "Unknown") .. " x" .. (item.qty or 1) .. "|r"
                                 )
                             end
                         end

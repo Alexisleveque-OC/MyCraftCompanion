@@ -248,5 +248,12 @@ function MCC.CreateSettingsUI(parent)
     end)
     RefreshShopDropdownText()
 
+    local shopSourceNote = container:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    shopSourceNote:SetPoint("TOPLEFT", shopDropdown, "BOTTOMLEFT", 15, -5)
+    shopSourceNote:SetWidth(parent:GetWidth() - 60)
+    shopSourceNote:SetJustifyH("LEFT")
+    shopSourceNote:SetText(MCC.L["Shopping_List_Source_Note"] or
+    "|cffff9900Note:|r Profit calculations and ingredient quantities automatically adapt to this source.")
+
     return container
 end

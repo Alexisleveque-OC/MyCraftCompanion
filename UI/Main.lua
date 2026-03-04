@@ -140,6 +140,8 @@ function MCC.InitUI()
             MCC.FactoryScroll:Show()
             if MCC.ShoppingFrame then MCC.ShoppingFrame:Show() end
             cfgText:SetText(MCC.L["Config"] or "Config")
+            -- Refresh UI to restore scrollbar if needed
+            MCC.RenderMCCUI()
         else
             MCC.ConfigFrame:Show()
             MCC.FactoryScroll:Hide()
@@ -148,6 +150,8 @@ function MCC.InitUI()
 
             -- New logic: hide shopping list during config
             if MCC.ShoppingFrame then MCC.ShoppingFrame:Hide() end
+            -- Hide horizontal slider during config
+            if MCC.HSlider then MCC.HSlider:Hide() end
         end
     end)
 
