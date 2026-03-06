@@ -29,11 +29,7 @@ function MCC.CaptureProfessionData()
     local childInfo = C_TradeSkillUI.GetChildProfessionInfo()
 
     if baseInfo and baseInfo.professionID then
-        MCC.Log("Capture Attempt: BaseID=" ..
-            tostring(baseInfo.professionID) .. " Name=" .. tostring(baseInfo.professionName))
         if childInfo then
-            MCC.Log("Capture Attempt: ChildID=" ..
-                tostring(childInfo.professionID) .. " Name=" .. tostring(childInfo.professionName))
         end
 
         local player = MCC.player
@@ -53,14 +49,11 @@ function MCC.CaptureProfessionData()
                     if currencyID and currencyID > 0 then
                         if m.concentrationCurrencyID ~= currencyID then
                             m.concentrationCurrencyID = currencyID
-                            MCC.Log("Captured NEW CurrencyID: " ..
-                                currencyID .. " for " .. m.name .. " (TargetID: " .. targetID .. ")")
                         end
                         -- Always refresh values when UI is open
                         MCC.UpdatePlayerConcentration()
                         if MCC.RenderMCCUI then MCC.RenderMCCUI() end
                     else
-                        MCC.Log("Capture info: No CurrencyID discovered yet for " .. m.name)
                     end
                 end
             end
@@ -133,7 +126,6 @@ function MCC.InitProfessionUI()
             if metier.activeRecipeID == recipeInfo.recipeID then
                 MCC.ClearCurrentCraft(player, metierIndex)
             end
-            MCC.Log("|cffff4444MCC:|r Recette supprimée: " .. recipeInfo.name)
             if MCC.UpdateShoppingList then MCC.UpdateShoppingList() end
             if MCC.RenderMCCUI then MCC.RenderMCCUI() end
         end
@@ -165,7 +157,6 @@ function MCC.InitProfessionUI()
     setCurrentCraftbutton:SetScript("OnClick", function()
         local recipeInfo, metierIndex, player = GetCurrentRecipeContext()
         if not recipeInfo or not metierIndex then
-            MCC.Log("Métier ou recette non prêt(e)")
             return
         end
 
@@ -383,7 +374,6 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
                 if MCC.isWorkActive and MCC.workStep == "BUYER_WARBANK_DEPOSIT" then
                     if MCC.HasRequiredInBags and not MCC.HasRequiredInBags() then
                         if MCC.ValidateWorkStep then
-                            MCC.Log(MCC.L["Deposit complete. Advancing."] or "Dépôt terminé. Avancement.")
                             MCC.ValidateWorkStep()
                         end
                     end
@@ -402,7 +392,6 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
 
         -- AUTO-ADVANCE: Sync step
         if MCC.isWorkActive and MCC.workStep == "BUYER_WARBANK_SYNC" then
-            MCC.Log(MCC.L["Bank opened. Data synced."] or "Banque ouverte. Données synchronisées.")
             if MCC.ValidateWorkStep then MCC.ValidateWorkStep() end
         end
     elseif event == "PLAYERBANKSLOTS_CHANGED" then
@@ -420,10 +409,8 @@ mailEventFrame:RegisterEvent("MAIL_SEND_SUCCESS")
 
 function MCC.DepositAllWarboundItems()
     if C_Bank and C_Bank.AutoDepositItemsIntoBank then
-        MCC.Log("MCC: Dépôt via AutoDepositItemsIntoBank(Account)")
         C_Bank.AutoDepositItemsIntoBank(Enum.BankType.Account)
     elseif C_Bank and C_Bank.DepositAllWarboundItems then
-        MCC.Log("MCC: Dépôt via DepositAllWarboundItems()")
         C_Bank.DepositAllWarboundItems()
     else
         MCC.Log("|cffff0000MCC Error:|r Aucune API de dépôt Warbank trouvée.")
@@ -520,7 +507,6 @@ function MCC.SyncReagentsToWoWUI(playerName, metierIndex)
     local transaction = schematicForm:GetTransaction()
     if not transaction then return end
 
-    MCC.Log("MCC: Application des composants vers WoW (" .. metier.currentCraft .. ")")
 
     -- For basic reagents, we want to allocate based on what's in MCC
     -- We'll use the SchematicForm:AllocateItem which is the cleanest way

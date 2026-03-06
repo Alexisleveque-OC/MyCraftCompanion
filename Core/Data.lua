@@ -114,25 +114,18 @@ function MCC.RegisterPlayerCraft(playerName, professions)
             -- Concentration Trackers
             local currencyID = C_TradeSkillUI.GetConcentrationCurrencyID(skillLine)
             MCC_Config[playerName].metiers[i].concentrationCurrencyID = currencyID
-            MCC.Log("Register: Prof=" ..
-                (name or "nil") .. " SkillLine=" .. (skillLine or "nil") .. " CurrencyID=" .. (currencyID or "nil"))
 
             if currencyID then
                 local currencyInfo = C_CurrencyInfo.GetCurrencyInfo(currencyID)
                 if currencyInfo then
                     MCC_Config[playerName].metiers[i].concentration = currencyInfo.quantity or 0
                     MCC_Config[playerName].metiers[i].concentrationMax = currencyInfo.maxQuantity or 1000
-                    MCC.Log("Register: Conc=" ..
-                        (currencyInfo.quantity or 0) .. "/" .. (currencyInfo.maxQuantity or 1000))
                 else
-                    MCC.Log("Register: CurrencyInfo NIL for " .. currencyID)
                 end
             end
             MCC_Config[playerName].metiers[i].lastUpdate = time()
         end
     end
-
-    MCC.Log((MCC.L["Character registered: "] or "Character registered: ") .. playerName)
 end
 
 function MCC.UpdatePlayerConcentration()
@@ -147,21 +140,14 @@ function MCC.UpdatePlayerConcentration()
                 metier.concentration = currencyInfo.quantity or 0
                 metier.concentrationMax = currencyInfo.maxQuantity or 1000
                 metier.lastUpdate = time()
-                MCC.Log("Update: Metier=" ..
-                    (metier.name or i) .. " Conc=" .. metier.concentration .. "/" .. metier.concentrationMax)
             else
-                MCC.Log("Update: CurrencyInfo NIL for " .. (metier.name or i) .. " (ID: " .. tostring(currencyID) .. ")")
             end
         else
-            MCC.Log("Update: No CurrencyID for metier " .. (metier.name or i))
         end
     end
 end
 
 function MCC.SetCurrentCraft(playerName, metierIndex, recipe, concCost, uiReagents)
-    MCC.Log("SetCurrentCraft called for " ..
-        tostring(playerName) .. " | Recipe: " .. (recipe and (recipe.recipeName or recipe.recipeID) or "nil"))
-
     if not recipe then
         MCC.Log("MCC Error: SetCurrentCraft received nil recipe")
         return
@@ -186,10 +172,8 @@ function MCC.SetCurrentCraft(playerName, metierIndex, recipe, concCost, uiReagen
         local saved = metier.savedSchematics[recipe.recipeID]
         metier.craftRecipe = saved.craftRecipe
         metier.craftQuantity = saved.craftQuantity
-        MCC.Log("MCC: " .. (MCC.L["Craft restored for"] or "Craft restored for") .. " " .. metier.currentCraft)
     elseif metier.savedSchematics[recipe.recipeID] and uiReagents then
         -- Saved craft exists but player clicked with fresh selections → reinit with overrides
-        MCC.Log("MCC: Mise à jour des ingrédients pour " .. metier.currentCraft)
         metier.savedSchematics[recipe.recipeID] = nil -- force re-init with uiReagents
     else
         -- INITIALIZE NEW
@@ -271,8 +255,6 @@ function MCC.SetCurrentCraft(playerName, metierIndex, recipe, concCost, uiReagen
     --     metier.craftQuantity = capacity
     -- end
 
-    MCC.Log("MCC: " .. (MCC.L["Craft defined/updated:"] or "Craft defined/updated:") .. " " ..
-        metier.currentCraft .. " (Cost: " .. (metier.concentrationCost or 0) .. ")")
 
     -- 3. SAVE IMMEDIATELY
     metier.savedSchematics[metier.activeRecipeID] = {
@@ -712,7 +694,6 @@ function MCC.UpdateCostFromRealCraft(playerName, metierIndex, realCost)
         --     end
         -- end
 
-        MCC.Log("|cff00ff00MCC:|r Concentration updated (" .. realCost .. ")")
         if MCC.UpdateShoppingList then MCC.UpdateShoppingList() end
         if MCC.RenderMCCUI then MCC.RenderMCCUI() end
     end
@@ -726,10 +707,8 @@ function MCC.ToggleFavorite(recipeID, recipeName, metierIndex)
     metier.favorites = metier.favorites or {}
     if metier.favorites[recipeID] then
         metier.favorites[recipeID] = nil
-        MCC.Log((MCC.L["Removed from favorites:"] or "Removed from favorites:") .. " " .. recipeName)
     else
         metier.favorites[recipeID] = recipeName
-        MCC.Log((MCC.L["Added to favorites:"] or "Added to favorites:") .. " " .. recipeName)
     end
 end
 
@@ -743,7 +722,6 @@ function MCC.ClearCurrentCraft(playerName, metierIndex)
         metier.craftRecipe = nil
         metier.craftQuantity = nil
         metier.activeRecipeID = nil
-        MCC.Log((MCC.L["Craft deleted for"] or "Craft deleted for") .. " " .. playerName)
     end
 end
 

@@ -132,8 +132,6 @@ function MCC.CreatePlayerContent(parent, playerName, pdata, columnIndex)
                 -- Force immediate UI feedback
                 UIDropDownMenu_SetText(craftDropdown, "|cffffffff" .. MCC.L["None"] .. "|r")
                 MCC.RenderMCCUI()
-
-                MCC.Log("|cffff4444MCC:|r Recette supprimée: " .. (metier.currentCraft or ""))
             end
         end)
         delBtn:SetScript("OnEnter", function(self)
@@ -263,7 +261,9 @@ function MCC.CreatePlayerContent(parent, playerName, pdata, columnIndex)
 
             function MCC.RefreshLocalProfit(metier, playerName)
                 if not metier or not metier.saleText then return end
-                local craftQty = MCC.GetEffectiveCraftQuantity(metier)
+                -- The label below the craft should ALWAYS show profit for 1 unit
+                -- even if the actual craft quantity (for shopping list) is different.
+                local craftQty = 1
                 local outputQty = metier.outputQty or 1
                 local bestItemID = metier.outputItemID
 
