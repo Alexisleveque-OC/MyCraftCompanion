@@ -110,7 +110,7 @@ Orchestration complète d’une session industrielle.
 - [??] Faire une shopping liste pour commencer les métiers de forge / Joa / enchant /calligraphie
 - [??] Ajouter la concentration value sur chaque recette ( = génération de gold pour 1 point de concentration )
 - [??] un bouton qui permete de définir tous les craft avec la meilleur concentration value ou le plus grand profit (au choix de l'user)
-- [??] pouvoir déplier/plier toutes les recettes pour ne voir que le profit
+- [??] pouvoir déplier/plier toutes les recettes pour ne voir que le nom de la recette et les infos intéréssantes (profit, concentration, coût)
 - [??] faire une page de résumé qui deviendra meme la page principale
 
 ### 2.5.6 fix le workflow [v0.4.3] [??]

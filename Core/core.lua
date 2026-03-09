@@ -45,7 +45,7 @@ frame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" then
         local name = ...
         if name == addonName then
-            MCC.version = "0.4"
+            MCC.version = "0.4.2"
             MCC_Config = MCC_Config or {}
             MCC_Config.Warbank = MCC_Config.Warbank or {}
 
