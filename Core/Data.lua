@@ -3,6 +3,16 @@ local GetRealmName = GetRealmName
 local UnitName = UnitName
 local Enum = Enum
 local C_Container = C_Container
+local C_CurrencyInfo = C_CurrencyInfo
+local C_TradeSkillUI = C_TradeSkillUI
+local ipairs = ipairs
+local pairs = pairs
+local next = next
+local type = type
+local tostring = tostring
+local time = time
+local math = math
+local table = table
 
 -- CONSISTENT PLAYER KEY: Used across the addon to group data
 -- Initialized in Data.lua for load order safety.
@@ -19,19 +29,23 @@ function MCC.GetMissingIngredients(multiplier)
             -- CRITICAL FIX: Only count hyphenated names to avoid doubling with stale "ShortName" entries
             if playerName:find("-") then
                 for _, metier in ipairs(pdata.metiers or {}) do
-                    if metier.currentCraft and metier.craftRecipe then
-                        local craftQty = tonumber(metier.craftQuantity) or 1
-                        for _, slot in ipairs(metier.craftRecipe) do
-                            if slot.selectedItemID then
-                                local itemID = slot.selectedItemID
-                                local rank = slot.selectedRank or 0
-                                local key = itemID .. "-" .. rank
-                                local totalQty = (slot.quantity or 0) * craftQty
+                    if metier.craftRecipe then
+                        -- NEW: Use effective quantity helper
+                        local craftQty = MCC.GetEffectiveCraftQuantity(metier)
 
-                                if not aggregateDemand[key] then
-                                    aggregateDemand[key] = { itemID = itemID, rank = slot.selectedRank, quantity = 0 }
+                        if craftQty > 0 then
+                            for _, slot in ipairs(metier.craftRecipe) do
+                                if slot.selectedItemID then
+                                    local itemID = slot.selectedItemID
+                                    local rank = slot.selectedRank or 0
+                                    local key = itemID .. "-" .. rank
+                                    local totalQty = (slot.quantity or 0) * craftQty
+
+                                    if not aggregateDemand[key] then
+                                        aggregateDemand[key] = { itemID = itemID, rank = slot.selectedRank, quantity = 0 }
+                                    end
+                                    aggregateDemand[key].quantity = aggregateDemand[key].quantity + totalQty
                                 end
-                                aggregateDemand[key].quantity = aggregateDemand[key].quantity + totalQty
                             end
                         end
                     end
@@ -90,7 +104,7 @@ function MCC.RegisterPlayerCraft(playerName, professions)
         if prof then
             local _, classFile = UnitClass("player")
             MCC_Config[playerName].class = classFile
-            local name, _, rank, maxRank = GetProfessionInfo(prof)
+            local name, _, rank, maxRank, _, _, skillLine = GetProfessionInfo(prof)
             MCC_Config[playerName].metiers[i] = MCC_Config[playerName].metiers[i] or {}
             MCC_Config[playerName].metiers[i].name = name
             -- Tracked per métier
@@ -98,22 +112,42 @@ function MCC.RegisterPlayerCraft(playerName, professions)
             MCC_Config[playerName].metiers[i].savedSchematics = MCC_Config[playerName].metiers[i].savedSchematics or {}
 
             -- Concentration Trackers
-            MCC_Config[playerName].metiers[i].concentration = MCC_Config[playerName].metiers[i].concentration or 0
-            MCC_Config[playerName].metiers[i].concentrationMax = MCC_Config[playerName].metiers[i].concentrationMax or
-                1000
-            MCC_Config[playerName].metiers[i].lastUpdate = MCC_Config[playerName].metiers[i].lastUpdate or time()
-            MCC_Config[playerName].metiers[i].concentrationCurrencyID = MCC_Config[playerName].metiers[i]
-                .concentrationCurrencyID or nil
+            local currencyID = C_TradeSkillUI.GetConcentrationCurrencyID(skillLine)
+            MCC_Config[playerName].metiers[i].concentrationCurrencyID = currencyID
+
+            if currencyID then
+                local currencyInfo = C_CurrencyInfo.GetCurrencyInfo(currencyID)
+                if currencyInfo then
+                    MCC_Config[playerName].metiers[i].concentration = currencyInfo.quantity or 0
+                    MCC_Config[playerName].metiers[i].concentrationMax = currencyInfo.maxQuantity or 1000
+                else
+                end
+            end
+            MCC_Config[playerName].metiers[i].lastUpdate = time()
         end
     end
+end
 
-    MCC.Log((MCC.L["Character registered: "] or "Character registered: ") .. playerName)
+function MCC.UpdatePlayerConcentration()
+    local player = MCC.player
+    if not MCC_Config[player] or not MCC_Config[player].metiers then return end
+
+    for i, metier in ipairs(MCC_Config[player].metiers) do
+        local currencyID = metier.concentrationCurrencyID
+        if currencyID then
+            local currencyInfo = C_CurrencyInfo.GetCurrencyInfo(currencyID)
+            if currencyInfo then
+                metier.concentration = currencyInfo.quantity or 0
+                metier.concentrationMax = currencyInfo.maxQuantity or 1000
+                metier.lastUpdate = time()
+            else
+            end
+        else
+        end
+    end
 end
 
 function MCC.SetCurrentCraft(playerName, metierIndex, recipe, concCost, uiReagents)
-    MCC.Log("SetCurrentCraft called for " ..
-        tostring(playerName) .. " | Recipe: " .. (recipe and (recipe.recipeName or recipe.recipeID) or "nil"))
-
     if not recipe then
         MCC.Log("MCC Error: SetCurrentCraft received nil recipe")
         return
@@ -138,10 +172,8 @@ function MCC.SetCurrentCraft(playerName, metierIndex, recipe, concCost, uiReagen
         local saved = metier.savedSchematics[recipe.recipeID]
         metier.craftRecipe = saved.craftRecipe
         metier.craftQuantity = saved.craftQuantity
-        MCC.Log("MCC: " .. (MCC.L["Craft restored for"] or "Craft restored for") .. " " .. metier.currentCraft)
     elseif metier.savedSchematics[recipe.recipeID] and uiReagents then
         -- Saved craft exists but player clicked with fresh selections → reinit with overrides
-        MCC.Log("MCC: Mise à jour des ingrédients pour " .. metier.currentCraft)
         metier.savedSchematics[recipe.recipeID] = nil -- force re-init with uiReagents
     else
         -- INITIALIZE NEW
@@ -223,8 +255,6 @@ function MCC.SetCurrentCraft(playerName, metierIndex, recipe, concCost, uiReagen
     --     metier.craftQuantity = capacity
     -- end
 
-    MCC.Log("MCC: " .. (MCC.L["Craft defined/updated:"] or "Craft defined/updated:") .. " " ..
-        metier.currentCraft .. " (Cost: " .. (metier.concentrationCost or 0) .. ")")
 
     -- 3. SAVE IMMEDIATELY
     metier.savedSchematics[metier.activeRecipeID] = {
@@ -243,8 +273,51 @@ end
 
 -- Calculation Helpers
 function MCC.GetEstimatedConcentration(metier)
-    -- Simplified: Assume 1000 max as requested
-    return 1000
+    local lastConc = metier.concentration or 0
+    local maxConc = metier.concentrationMax or 1000
+    local lastUpdate = metier.lastUpdate or time()
+
+    -- 10 points per hour = 10 / 3600 points per second
+    local diffSeconds = time() - lastUpdate
+    if diffSeconds <= 0 then return lastConc end
+
+    local earned = math.floor(diffSeconds * (10 / 3600))
+    return math.min(maxConc, lastConc + earned)
+end
+
+function MCC.GetCappingCharacters()
+    local alerts = {}
+    for playerName, pdata in pairs(MCC_Config) do
+        if type(pdata) == "table" and pdata.metiers then
+            for _, metier in ipairs(pdata.metiers or {}) do
+                if metier.concentrationCurrencyID then
+                    local current = MCC.GetEstimatedConcentration(metier)
+                    local max = metier.concentrationMax or 1000
+
+                    -- Dynamic threshold: enough concentration to perform the "Cap Max"
+                    local cost = metier.concentrationCost or 0
+                    local threshold = max * 0.95 -- Default 95%
+
+                    if cost > 0 then
+                        local capMax = math.floor(max / cost)
+                        threshold = capMax * cost
+                    end
+
+                    if current >= threshold then
+                        table.insert(alerts, {
+                            player = playerName,
+                            metier = metier.name,
+                            concentration = current,
+                            max = max,
+                            class = pdata.class,
+                            ready = true
+                        })
+                    end
+                end
+            end
+        end
+    end
+    return alerts
 end
 
 -- Internal mapping for Enchants that don't return an ItemID via Blizzard APIs
@@ -301,6 +374,54 @@ MCC.CraftingDataMap = {
     [1660] = 223796,
     [1661] = 223784,
     [2447] = 223665,
+    -- Midnight
+    [3758] = 243377,
+    [3795] = 243947,
+    [3796] = 243949,
+    [3797] = 243951,
+    [3798] = 243953,
+    [3799] = 243955,
+    [3800] = 243957,
+    [3801] = 243959,
+    [3802] = 243961,
+    [3803] = 243963,
+    [3804] = 243965,
+    [3805] = 243967,
+    [3806] = 243969,
+    [3807] = 243971,
+    [3808] = 243973,
+    [3809] = 243975,
+    [3810] = 243977,
+    [3811] = 243979,
+    [3812] = 243981,
+    [3813] = 243983,
+    [3814] = 243985,
+    [3815] = 243987,
+    [3816] = 243989,
+    [3817] = 243991,
+    [3818] = 243993,
+    [3819] = 243994,
+    [3820] = 243997,
+    [3821] = 243999,
+    [3822] = 244001,
+    [3823] = 244003,
+    [3824] = 244005,
+    [3825] = 244007,
+    [3826] = 244009,
+    [3827] = 244011,
+    [3828] = 244013,
+    [3829] = 244015,
+    [3830] = 244017,
+    [3831] = 244019,
+    [3832] = 244021,
+    [3833] = 244023,
+    [3834] = 244025,
+    [3835] = 244027,
+    [3836] = 244028,
+    [3837] = 244031,
+    [3838] = 244033,
+    [3839] = 244035,
+    [3840] = 244037,
 }
 
 function MCC.GetRecipeMaxRankItemID(recipeID)
@@ -367,11 +488,28 @@ function MCC.GetRecipeMaxRankItemID(recipeID)
 end
 
 function MCC.GetCraftCapacity(metier)
+    local maxConc = metier.concentrationMax or 1000
+    local cost = metier.concentrationCost or 0
+    if cost <= 0 then return nil end
+
+    return math.floor(maxConc / cost)
+end
+
+function MCC.GetAvailableCraftCapacity(metier)
     local current = MCC.GetEstimatedConcentration(metier)
     local cost = metier.concentrationCost or 0
     if cost <= 0 then return nil end
 
     return math.floor(current / cost)
+end
+
+function MCC.GetEffectiveCraftQuantity(metier)
+    local currentSource = MCC_Config.shoppingQuantitySource or "MANUAL"
+    if currentSource == "CONCENTRATION" then
+        return MCC.GetAvailableCraftCapacity(metier) or 0
+    else
+        return tonumber(metier.craftQuantity) or 1
+    end
 end
 
 function MCC.GetSessionEconomics(multiplier)
@@ -385,7 +523,7 @@ function MCC.GetSessionEconomics(multiplier)
         if type(pdata) == "table" and pdata.isCharacter then
             for _, metier in ipairs(pdata.metiers or {}) do
                 if metier.currentCraft and metier.craftRecipe then
-                    local craftQty = tonumber(metier.craftQuantity) or 1
+                    local craftQty = MCC.GetEffectiveCraftQuantity(metier)
                     for _, slot in ipairs(metier.craftRecipe) do
                         if slot.selectedItemID then
                             local qtyPerCraft = slot.quantity or 0
@@ -452,7 +590,7 @@ function MCC.GetSessionProfit(multiplier)
         if type(pdata) == "table" then
             for _, metier in ipairs(pdata.metiers or {}) do
                 if metier.currentCraft then
-                    local craftQty = (tonumber(metier.craftQuantity) or 1) * (multiplier or 1)
+                    local craftQty = MCC.GetEffectiveCraftQuantity(metier) * (multiplier or 1)
                     local outputQty = metier.outputQty or 1
                     local bestItemID = metier.outputItemID
 
@@ -556,7 +694,6 @@ function MCC.UpdateCostFromRealCraft(playerName, metierIndex, realCost)
         --     end
         -- end
 
-        MCC.Log("|cff00ff00MCC:|r Concentration updated (" .. realCost .. ")")
         if MCC.UpdateShoppingList then MCC.UpdateShoppingList() end
         if MCC.RenderMCCUI then MCC.RenderMCCUI() end
     end
@@ -570,10 +707,8 @@ function MCC.ToggleFavorite(recipeID, recipeName, metierIndex)
     metier.favorites = metier.favorites or {}
     if metier.favorites[recipeID] then
         metier.favorites[recipeID] = nil
-        MCC.Log((MCC.L["Removed from favorites:"] or "Removed from favorites:") .. " " .. recipeName)
     else
         metier.favorites[recipeID] = recipeName
-        MCC.Log((MCC.L["Added to favorites:"] or "Added to favorites:") .. " " .. recipeName)
     end
 end
 
@@ -587,7 +722,6 @@ function MCC.ClearCurrentCraft(playerName, metierIndex)
         metier.craftRecipe = nil
         metier.craftQuantity = nil
         metier.activeRecipeID = nil
-        MCC.Log((MCC.L["Craft deleted for"] or "Craft deleted for") .. " " .. playerName)
     end
 end
 

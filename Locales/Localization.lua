@@ -122,6 +122,12 @@ if locale == "frFR" then
     L["Note_03_1"] = "|cffffcc00Refonte UI :|r Nouveau look moderne (Style Doré)."
     L["Note_03_2"] = "|cffffcc00Optimisation :|r Code plus propre et globalisé."
     L["Note_03_3"] = "|cffffcc00Préparation :|r Base posée pour Factory View."
+    L["Note_04_1"] = "|cffffcc00Work work ! :|r Déploiement du moteur de production (/mcc process)."
+    L["Note_04_2"] = "|cffffcc00Vendeur :|r Configuration du perso vendeur pour centraliser les produits."
+    L["Note_04_3"] = "|cffffcc00Factory View :|r Vue synthétique des profits et coûts de session."
+    L["Note_04_4"] = "|cffffcc00Logistique :|r Amélioration du scan des inventaires et de la Warbank."
+    L["Note_041_1"] = "|cffffcc00Concentration :|r Préparation du système de suivi de concentration."
+    L["Note_041_2"] = "|cffffcc00Version 0.4.1 :|r Branche de développement P2.5."
     L["Set MCC Craft"] = "Définir Craft MCC"
     L["Send Crafts"] = "Envoyer les crafts"
     L["Deposit Warbound"] = "Dépôt Bataillon"
@@ -130,6 +136,20 @@ if locale == "frFR" then
     "Affiche l'écran 'Du travail, encore du travail !' au démarrage et attend un clic."
     L["Collapse Ingredients"] = "Réduire les ingrédients"
     L["Expand Ingredients"] = "Afficher les ingrédients"
+    L["Concentration Display (Minimap)"] = "Affichage Concentration (Minimap)"
+    L["How to display concentration alerts in the minimap tooltip."] =
+    "Comment afficher les alertes de concentration dans le tooltip de la minimap."
+    L["Always Show"] = "Toujours afficher"
+    L["During Session Only"] = "En session uniquement"
+    L["Never Show"] = "Ne jamais afficher"
+    L["Shopping List Quantity Source"] = "Source de quantité Shopping List"
+    L["Select how the quantity to craft/buy is determined."] =
+    "Sélectionnez comment la quantité à crafter/acheter est déterminée."
+    L["Manual Quantity (User Input)"] = "Quantité Manuelle (Saisie utilisateur)"
+    L["Concentration Cap (Automatic)"] = "Cap Concentration (Automatique)"
+    L["PRÊT À CRAFTER (CAP MAX)"] = "PRÊT À CRAFTER (CAP MAX)"
+    L["Shopping_List_Source_Note"] =
+    "|cffff9900Note :|r Les calculs de profits et les quantités d'ingrédients s'adaptent automatiquement à cette source."
 else
     -- English Translations (Explicit for clarity, though fallback works)
     L["Shopping List (Total Ingredients)"] = "Shopping List (Total Ingredients)"
@@ -241,6 +261,12 @@ else
     L["Note_03_1"] = "|cffffcc00UI Refactor:|r New modern look (Gold Style)."
     L["Note_03_2"] = "|cffffcc00Optimization:|r Cleaner and globalized code."
     L["Note_03_3"] = "|cffffcc00Preparation:|r Base set for Factory View."
+    L["Note_04_1"] = "|cffffcc00Work work !:|r Production engine deployment (/mcc process)."
+    L["Note_04_2"] = "|cffffcc00Seller:|r Seller character configuration to centralize products."
+    L["Note_04_3"] = "|cffffcc00Factory View:|r Synthetic view of session profits and costs."
+    L["Note_04_4"] = "|cffffcc00Logistics:|r Improved inventory and Warband scanning."
+    L["Note_041_1"] = "|cffffcc00Concentration:|r Concentration tracking system preparation."
+    L["Note_041_2"] = "|cffffcc00Version 0.4.1:|r P2.5 development branch."
     L["Set MCC Craft"] = "Set MCC Craft"
     L["Send Crafts"] = "Send Crafts"
     L["Deposit Warbound"] = "Deposit Warbound"
@@ -249,6 +275,19 @@ else
     "Display the 'Work, work !' screen at the start and wait for a click."
     L["Collapse Ingredients"] = "Collapse Ingredients"
     L["Expand Ingredients"] = "Expand Ingredients"
+    L["Concentration Display (Minimap)"] = "Concentration Display (Minimap)"
+    L["How to display concentration alerts in the minimap tooltip."] =
+    "How to display concentration alerts in the minimap tooltip."
+    L["Always Show"] = "Always Show"
+    L["During Session Only"] = "During Session Only"
+    L["Never Show"] = "Never Show"
+    L["Shopping List Quantity Source"] = "Shopping List Quantity Source"
+    L["Select how the quantity to craft/buy is determined."] = "Select how the quantity to craft/buy is determined."
+    L["Manual Quantity (User Input)"] = "Manual Quantity (User Input)"
+    L["Concentration Cap (Automatic)"] = "Concentration Cap (Automatic)"
+    L["PRÊT À CRAFTER (CAP MAX)"] = "READY TO CRAFT (MAX CAP)"
+    L["Shopping_List_Source_Note"] =
+    "|cffff9900Note:|r Profit calculations and ingredient quantities automatically adapt to this source."
 end
 
 MCC.L = L

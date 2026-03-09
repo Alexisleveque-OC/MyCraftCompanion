@@ -55,18 +55,18 @@ Structurer les persos et centraliser la vision industrielle.
 
 ---
 
-# 🟠 PHASE 2.5 – Launch Process [/]
+# 🟠 PHASE 2.5 – Launch Process [v0.4] [/]
 
 ## 🎯 Objectif Work, work ! 
 Orchestration complète d’une session industrielle.
 
-### fix
+### 2.5.1 fix
 - [x] Compter correcteemnt les inventaires
 
-### Configuration
+### 2.5.2 Configuration
 - [x] Définir personnage vendeur
 
-### Work, work ! (Feature Signature)
+### 2.5.3 Work, work ! (Feature Signature)[v0.4.0] [x]
 - [x] Bouton "Work, work !" ou en FR 'Encore du travail ?'
 - [x] Bouton "Jobs Done !" ou en FR 'Travail terminé !'
 - [x] Définir si à la connexion le process doit être lancer automatiquement pour ce perso
@@ -90,43 +90,66 @@ Orchestration complète d’une session industrielle.
 - Craft métier 1 → métier 2
 - Envoi au vendeur
 
-### "Que me reste t-il à faire ?"
-- [??] Calcul et affichage de la concentration des persos
-- [??] affichage du Cout en concentration du craft
-- [??] affichage dans la toggle des personnages à connecter si potentielle perte de concentration
-- [??] Configuration pour afficher ces infos ou non 
- - Lors d'un session uniquement 
- - Toujours afficher 
- - Jamais afficher
-- [??] Définir une configuration: utilisé les infos rentré par l'user ou le cap apr la concentration pour calculer la shopping list et les crafts à faire.
+### 2.5.4 "Que me reste t-il à faire ?" [v0.4.1] [x]
+- [x] Calcul et affichage de la concentration des persos (Offline inclus)
+- [x] affichage du Cout en concentration du craft
+- [x] affichage dans la toggle des personnages à connecter si potentielle perte de concentration (Minimap)
+- [x] Configuration pour afficher les infos (dans la toggle) ou non (par défaut à "toujours afficher")
+  - Lors d'une session uniquement 
+  - Toujours afficher 
+  - Jamais afficher
+- [x] Définir une configuration: utilisé les infos rentré par l'user ou le cap par la concentration pour calculer la shopping list et les crafts à faire.
 
-### UI/UX
-- [??] définir
+### 2.5.5 UI/UX [v0.4.2] [??]
+- [??] pouvoir plier/déplier (masquer la liste des ingrédients sous chaque recette mais garder la partie cap et profit) les recettes dans L'UI pour que ce soit plus lisible. ça permettra d'avoir juste une sélection de recette et voir ce qui est le plus rentable en fonction des composants qu'on aura choisi
 - [??] Une case "Ignorer ce personnage aujourd'hui"
 - [??] Copier la recette depuis un autre personnage
+- [??] faire un bouton pour créer une shopping list juste pour un item (dans la liste des recettes)
+- [??] quand on set current craft, il faut que ça add les ingrédients rang 1 et que ça n'ajoute pas les ingrédients optionnels
+- [??] fix delete recipe-> set current craft none
+- [??] Faire une shopping liste pour commencer les métiers de forge / Joa / enchant /calligraphie
+- [??] Ajouter la concentration value sur chaque recette ( = génération de gold pour 1 point de concentration )
+- [??] un bouton qui permete de définir tous les craft avec la meilleur concentration value ou le plus grand profit (au choix de l'user)
+- [??] pouvoir déplier/plier toutes les recettes pour ne voir que le profit
+- [??] faire une page de résumé qui deviendra meme la page principale
+
+### 2.5.6 fix le workflow [v0.4.3] [??]
+- [??] faire en sorte que tout aille bien !
 
 ---
 
 # 🔵 PHASE 3 – Définir un mode
 
-### Modes de sélection d'ingrédients
+## Objectif
+Rendre l'addon plus libre pour tous le monde. Autant pour les débutant que pour les crafteurs éxpérimentés.
+
+### 3.1 Pouvoir séléctioner plusieurs rank d'ingrédients
+-  [!!] Modifier le Dropdown pour afficher le nom de l'item et au dessous le nombres d'entrée en fonction du nombre de rank disponibles
+-  [!!] Adapter le calcul de la shoppingList a cette nouvelle feature
+
+### 3.2 Modes de sélection d'ingrédients
 - [!!] **Mode Expert** : "Laisse-moi choisir mes ingrédients" - Permet de choisir manuellement les composants pour chaque recette.
  - ce mode au clic sur "Définir craft MCC " on laisse tout à blanc
 - [!!] **Mode Guidé** : "Je me laisse porter" - MCC définit par défaut les ingrédients les plus simples à utiliser.
   - Bien mettre une note que ça ne sera pas forcément le plus opti mais le plus simple
   - il va y avoir un peu de travail pour pour connaitre toutes les recettes et leur ingrédients.
+  - mettre en relation la shopping list plus haut
   - il faut conseillé les métiers simples pour les joueurs (joa, forge, enchant, calli)
   - un mini guide écrit :
+  - guide leveling 1-50
    - les points à gagner rapidement et facilement
     - la liste des outils à aller chercher
     - les commandes 
     - la quète hebdo
     - le first craft  
+    - quelques addons utiles
    - Quel spé et talent séléctionner en premier
    - Ne pas oublier les outils de métier
-   - Ne pas Négliger l'acuité pour créer des outils plus puissant pour le long terme### UI/UX
+   - Ne pas Négliger la moxie pour les recettes sauf pour les crafeteurs only
+   ### UI/UX
 - [??] définir
-### UI/UX
+
+### 3.3 UI/UX
 - [!!] **Mode Semi-Automatique workflow** : Option pour activer/désactiver les automatismes spécifiques (ex: choisir de sauter ou non l'étape de dépôt automatiquement).
   - Ajouter le saut d'étaps auto pour le deposit warbound
 

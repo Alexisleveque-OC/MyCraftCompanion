@@ -148,7 +148,6 @@ function MCC.StopWork()
     MCC.isWorkActive = false
     MCC.workStep = "IDLE"
     -- MCC.workStatusText = "" -- Keep last status (Jobs Done)
-    MCC.Log("|cff00ff00MCC:|r " .. (MCC.L["Jobs Done !"] or "Jobs Done !"))
 
     if MCC.RefreshWorkProcess then
         MCC.RefreshWorkProcess()
@@ -165,7 +164,6 @@ function MCC.ClearCurrentCraft(playerName, metierIndex)
         metier.craftRecipe = nil
         metier.craftQuantity = nil
         metier.activeRecipeID = nil
-        MCC.Log((MCC.L["Craft deleted for"] or "Craft deleted for") .. " " .. playerName)
         -- Fix: Refresh workflow if active to update "Market analysis" text
         if MCC.isWorkActive and MCC.RefreshWorkProcess then
             MCC.RefreshWorkProcess()
@@ -243,8 +241,6 @@ function MCC.ValidateWorkStep()
                 MCC.L["Deficit detected: %d items need to be purchased."] or "Déficit détecté : %d objets à acheter.",
                 totalDeficitItems)
         else
-            MCC.Log(MCC.L["No deficit detected. All reagents are available."] or
-                "Aucun déficit détecté. Tous les composants sont disponibles.")
             MCC.workStep = "BUYER_READY"
             MCC.ValidateWorkStep()
             return
@@ -261,7 +257,6 @@ function MCC.ValidateWorkStep()
         end
         local playerMoney = GetMoney()
         if playerMoney >= totalCost then
-            MCC.Log(MCC.L["Funds sufficient. Skipping Gold Check."] or "Fonds suffisants. Saut de l'étape de retrait.")
             MCC.workStep = "BUYER_GOLD_CHECK"
             MCC.ValidateWorkStep()
             return
@@ -284,7 +279,6 @@ function MCC.ValidateWorkStep()
 
         if stillMissing == 0 then
             -- Skip reagent check if all good, BUT DON'T RECURSE IMMEDIATELY to give UI a breath
-            MCC.Log(MCC.L["Skipping Reagent Check (All stocks OK)."] or "Saut de la vérification (stocks OK).")
             MCC.workStep = "BUYER_CRAFTING"
             MCC.RunCrafterWorkflow()
             return

@@ -1,8 +1,13 @@
 local addonName, MCC = ...
+local tostring = tostring
+local pairs = pairs
+local ipairs = ipairs
+local type = type
 local CreateFrame = CreateFrame
 local C_Item = C_Item
 local C_Timer = C_Timer
 local C_TradeSkillUI = C_TradeSkillUI
+local C_CurrencyInfo = C_CurrencyInfo
 local UnitName = UnitName
 local GetRealmName = GetRealmName
 local C_Container = C_Container
@@ -14,11 +19,52 @@ local hooksecurefunc = hooksecurefunc
 local select = select
 local pcall = pcall
 local print = print
-local ipairs = ipairs
 local string = string
 local Enum = Enum
 
+function MCC.CaptureProfessionData()
+    if not ProfessionsFrame or not ProfessionsFrame:IsShown() then return end
+
+    local baseInfo = C_TradeSkillUI.GetBaseProfessionInfo()
+    local childInfo = C_TradeSkillUI.GetChildProfessionInfo()
+
+    if baseInfo and baseInfo.professionID then
+        if childInfo then
+        end
+
+        local player = MCC.player
+        if MCC_Config[player] and MCC_Config[player].metiers then
+            for i, m in ipairs(MCC_Config[player].metiers) do
+                -- Compare names to find the right slot (localized)
+                if m.name == baseInfo.professionName or (childInfo and m.name == childInfo.professionName) then
+                    -- Priority to ChildID (Extension specific like Khaz Algar)
+                    local targetID = (childInfo and childInfo.professionID) or baseInfo.professionID
+                    local currencyID = C_TradeSkillUI.GetConcentrationCurrencyID(targetID)
+
+                    -- Fallback to BaseID if ChildID failed
+                    if (not currencyID or currencyID == 0) and childInfo then
+                        currencyID = C_TradeSkillUI.GetConcentrationCurrencyID(baseInfo.professionID)
+                    end
+
+                    if currencyID and currencyID > 0 then
+                        if m.concentrationCurrencyID ~= currencyID then
+                            m.concentrationCurrencyID = currencyID
+                        end
+                        -- Always refresh values when UI is open
+                        MCC.UpdatePlayerConcentration()
+                        if MCC.RenderMCCUI then MCC.RenderMCCUI() end
+                    else
+                    end
+                end
+            end
+        end
+    end
+end
+
 function MCC.InitProfessionUI()
+    -- Data capture should happen every time Init is called (which is on TRADE_SKILL_SHOW)
+    MCC.CaptureProfessionData()
+
     if not ProfessionsFrame or MCC_SetCraftButton then return end
 
     local parent = ProfessionsFrame.CraftingPage
@@ -80,7 +126,6 @@ function MCC.InitProfessionUI()
             if metier.activeRecipeID == recipeInfo.recipeID then
                 MCC.ClearCurrentCraft(player, metierIndex)
             end
-            MCC.Log("|cffff4444MCC:|r Recette supprimée: " .. recipeInfo.name)
             if MCC.UpdateShoppingList then MCC.UpdateShoppingList() end
             if MCC.RenderMCCUI then MCC.RenderMCCUI() end
         end
@@ -112,7 +157,6 @@ function MCC.InitProfessionUI()
     setCurrentCraftbutton:SetScript("OnClick", function()
         local recipeInfo, metierIndex, player = GetCurrentRecipeContext()
         if not recipeInfo or not metierIndex then
-            MCC.Log("Métier ou recette non prêt(e)")
             return
         end
 
@@ -330,7 +374,6 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
                 if MCC.isWorkActive and MCC.workStep == "BUYER_WARBANK_DEPOSIT" then
                     if MCC.HasRequiredInBags and not MCC.HasRequiredInBags() then
                         if MCC.ValidateWorkStep then
-                            MCC.Log(MCC.L["Deposit complete. Advancing."] or "Dépôt terminé. Avancement.")
                             MCC.ValidateWorkStep()
                         end
                     end
@@ -349,7 +392,6 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
 
         -- AUTO-ADVANCE: Sync step
         if MCC.isWorkActive and MCC.workStep == "BUYER_WARBANK_SYNC" then
-            MCC.Log(MCC.L["Bank opened. Data synced."] or "Banque ouverte. Données synchronisées.")
             if MCC.ValidateWorkStep then MCC.ValidateWorkStep() end
         end
     elseif event == "PLAYERBANKSLOTS_CHANGED" then
@@ -367,10 +409,8 @@ mailEventFrame:RegisterEvent("MAIL_SEND_SUCCESS")
 
 function MCC.DepositAllWarboundItems()
     if C_Bank and C_Bank.AutoDepositItemsIntoBank then
-        MCC.Log("MCC: Dépôt via AutoDepositItemsIntoBank(Account)")
         C_Bank.AutoDepositItemsIntoBank(Enum.BankType.Account)
     elseif C_Bank and C_Bank.DepositAllWarboundItems then
-        MCC.Log("MCC: Dépôt via DepositAllWarboundItems()")
         C_Bank.DepositAllWarboundItems()
     else
         MCC.Log("|cffff0000MCC Error:|r Aucune API de dépôt Warbank trouvée.")
@@ -467,7 +507,6 @@ function MCC.SyncReagentsToWoWUI(playerName, metierIndex)
     local transaction = schematicForm:GetTransaction()
     if not transaction then return end
 
-    MCC.Log("MCC: Application des composants vers WoW (" .. metier.currentCraft .. ")")
 
     -- For basic reagents, we want to allocate based on what's in MCC
     -- We'll use the SchematicForm:AllocateItem which is the cleanest way

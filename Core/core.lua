@@ -1,16 +1,42 @@
 local addonName, MCC = ...
-
+local tostring = tostring
+local pairs = pairs
+local ipairs = ipairs
+local type = type
+local CreateFrame = CreateFrame
+local C_Item = C_Item
+local C_Timer = C_Timer
+local C_TradeSkillUI = C_TradeSkillUI
+local C_CurrencyInfo = C_CurrencyInfo
+local UnitName = UnitName
+local GetRealmName = GetRealmName
+local C_Container = C_Container
+local C_Bank = C_Bank
+local SendMailNameEditBox = SendMailNameEditBox
+local MailFrame = MailFrame
+local ProfessionsFrame = ProfessionsFrame
+local hooksecurefunc = hooksecurefunc
+local select = select
+local pcall = pcall
+local print = print
+local string = string
+local Enum = Enum
+local math = math
+local _G = _G
+local UnitClass = UnitClass
+local IsShiftKeyDown = IsShiftKeyDown
+local GetMoneyString = GetMoneyString
+local C_ClassColor = C_ClassColor
+local RAID_CLASS_COLORS = RAID_CLASS_COLORS
+local GetProfessions = GetProfessions
 -- Expose MCC globally for /run commands and debugging
 _G["MCC"] = MCC
-
--- Cache global functions for performance
-local GetRealmName = GetRealmName
-local UnitName = UnitName
 
 -- Frame principal pour les events
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("TRADE_SKILL_SHOW")
+frame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 
 -- Event handler
 frame:SetScript("OnEvent", function(self, event, ...)
@@ -113,8 +139,9 @@ frame:SetScript("OnEvent", function(self, event, ...)
                     if pdata and pdata.metiers then
                         local activeCrafts = {}
                         for _, metier in ipairs(pdata.metiers) do
-                            if metier.currentCraft and (tonumber(metier.craftQuantity) or 0) > 0 then
-                                table.insert(activeCrafts, metier)
+                            local craftQty = MCC.GetEffectiveCraftQuantity(metier)
+                            if metier.currentCraft and (craftQty or 0) > 0 then
+                                table.insert(activeCrafts, { metier = metier, qty = craftQty })
                             end
                         end
 
@@ -139,11 +166,47 @@ frame:SetScript("OnEvent", function(self, event, ...)
                                 end
                             end
 
-                            for _, metier in ipairs(activeCrafts) do
+                            for _, item in ipairs(activeCrafts) do
                                 tooltip:AddDoubleLine(
                                     "  " .. displayPlayer,
                                     "|cffffffff" ..
-                                    (metier.currentCraft or "Unknown") .. " x" .. (metier.craftQuantity or 1) .. "|r"
+                                    (item.metier.currentCraft or "Unknown") .. " x" .. (item.qty or 1) .. "|r"
+                                )
+                            end
+                        end
+
+                        -- CONCENTRATION ALERTS (Respecting Config)
+                        local displayMode = MCC_Config.concentrationDisplayMode or "ALWAYS"
+                        local shouldShow = (displayMode == "ALWAYS") or
+                            (displayMode == "SESSION" and MCC.isWorkActive)
+
+                        local concAlerts = nil
+                        if shouldShow and displayMode ~= "NEVER" then
+                            concAlerts = MCC.GetCappingCharacters and MCC.GetCappingCharacters()
+                        end
+
+                        if concAlerts and #concAlerts > 0 then
+                            tooltip:AddLine(" ")
+                            tooltip:AddLine("|cff00ff00" ..
+                                (MCC.L["PRÊT À CRAFTER (CAP MAX)"] or "PRÊT À CRAFTER (CAP MAX)") .. "|r")
+                            for _, alert in ipairs(concAlerts) do
+                                local colorStr = "|cffffffff"
+                                if alert.class then
+                                    local c = (C_ClassColor and C_ClassColor.GetClassColor) and
+                                        C_ClassColor.GetClassColor(alert.class) or RAID_CLASS_COLORS[alert.class]
+                                    if c then
+                                        if c.WrapTextInColorCode then
+                                            colorStr = string.format("|cff%02x%02x%02x", c.r * 255, c.g * 255, c.b * 255)
+                                        else
+                                            colorStr = string.format("|cff%02x%02x%02x", c.r * 255, c.g * 255, c.b * 255)
+                                        end
+                                    end
+                                end
+                                tooltip:AddDoubleLine(
+                                    colorStr .. alert.player .. "|r",
+                                    "|cffff4444" ..
+                                    (alert.metier or "Unknown") ..
+                                    " (" .. alert.concentration .. "/" .. alert.max .. ")|r"
                                 )
                             end
                         end
@@ -169,8 +232,14 @@ frame:SetScript("OnEvent", function(self, event, ...)
         end
     elseif event == "TRADE_SKILL_SHOW" then
         C_Timer.After(0, function()
+            local prof1, prof2 = GetProfessions()
+            MCC.RegisterPlayerCraft(MCC.player, { prof1, prof2 })
+            MCC.UpdatePlayerConcentration()
             MCC.InitProfessionUI()
         end)
+    elseif event == "CURRENCY_DISPLAY_UPDATE" then
+        MCC.UpdatePlayerConcentration()
+        if MCC.RenderMCCUI then MCC.RenderMCCUI() end
     end
 end)
 
