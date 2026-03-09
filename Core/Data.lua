@@ -10,41 +10,48 @@ local pairs = pairs
 local next = next
 local type = type
 local tostring = tostring
+local tonumber = tonumber
+local pcall = pcall
+local string = string
 local time = time
 local math = math
 local table = table
 
 -- CONSISTENT PLAYER KEY: Used across the addon to group data
 -- Initialized in Data.lua for load order safety.
-MCC.player = UnitName("player") .. "-" .. (GetRealmName() or ""):gsub(" ", "")
+MCC.player = UnitName("player") .. "-" .. string.gsub(GetRealmName() or "", " ", "")
 
-function MCC.GetMissingIngredients(multiplier)
+function MCC.GetMissingIngredients(multiplier, filter)
     local totals = {}
     multiplier = multiplier or 1.0
 
     local aggregateDemand = {}
 
     for playerName, pdata in pairs(MCC_Config) do
-        if type(pdata) == "table" and pdata.isCharacter then
+        if type(pdata) == "table" and pdata.isCharacter and not pdata.ignoreToday then
             -- CRITICAL FIX: Only count hyphenated names to avoid doubling with stale "ShortName" entries
             if playerName:find("-") then
-                for _, metier in ipairs(pdata.metiers or {}) do
-                    if metier.craftRecipe then
-                        -- NEW: Use effective quantity helper
-                        local craftQty = MCC.GetEffectiveCraftQuantity(metier)
+                if not filter or (filter.playerName == playerName) then
+                    for metierIndex, metier in ipairs(pdata.metiers or {}) do
+                        if not filter or (filter.metierIndex == metierIndex) then
+                            if metier.craftRecipe then
+                                -- NEW: Use effective quantity helper
+                                local craftQty = MCC.GetEffectiveCraftQuantity(metier)
 
-                        if craftQty > 0 then
-                            for _, slot in ipairs(metier.craftRecipe) do
-                                if slot.selectedItemID then
-                                    local itemID = slot.selectedItemID
-                                    local rank = slot.selectedRank or 0
-                                    local key = itemID .. "-" .. rank
-                                    local totalQty = (slot.quantity or 0) * craftQty
+                                if craftQty > 0 then
+                                    for _, slot in ipairs(metier.craftRecipe) do
+                                        if slot.selectedItemID then
+                                            local itemID = slot.selectedItemID
+                                            local rank = slot.selectedRank or 0
+                                            local key = itemID .. "-" .. rank
+                                            local totalQty = (slot.quantity or 0) * craftQty
 
-                                    if not aggregateDemand[key] then
-                                        aggregateDemand[key] = { itemID = itemID, rank = slot.selectedRank, quantity = 0 }
+                                            if not aggregateDemand[key] then
+                                                aggregateDemand[key] = { itemID = itemID, rank = slot.selectedRank, quantity = 0 }
+                                            end
+                                            aggregateDemand[key].quantity = aggregateDemand[key].quantity + totalQty
+                                        end
                                     end
-                                    aggregateDemand[key].quantity = aggregateDemand[key].quantity + totalQty
                                 end
                             end
                         end
@@ -512,7 +519,7 @@ function MCC.GetEffectiveCraftQuantity(metier)
     end
 end
 
-function MCC.GetSessionEconomics(multiplier)
+function MCC.GetSessionEconomics(multiplier, filter)
     multiplier = multiplier or (MCC_Config and MCC_Config.shoppingMargin) or 1.0
 
     -- 1. Calculate Aggregate Demand (Sum of all character requirements)
@@ -520,9 +527,9 @@ function MCC.GetSessionEconomics(multiplier)
     local totalRequiredCost = 0
 
     for playerName, pdata in pairs(MCC_Config) do
-        if type(pdata) == "table" and pdata.isCharacter then
-            for _, metier in ipairs(pdata.metiers or {}) do
-                if metier.currentCraft and metier.craftRecipe then
+        if type(pdata) == "table" and pdata.isCharacter and not pdata.ignoreToday then
+            for metierIndex, metier in ipairs(pdata.metiers or {}) do
+                if (not filter or (filter.playerName == playerName and filter.metierIndex == metierIndex)) and metier.currentCraft and metier.craftRecipe then
                     local craftQty = MCC.GetEffectiveCraftQuantity(metier)
                     for _, slot in ipairs(metier.craftRecipe) do
                         if slot.selectedItemID then
@@ -582,14 +589,14 @@ function MCC.GetCraftReagentsCost(metier)
     return totalCost
 end
 
-function MCC.GetSessionProfit(multiplier)
+function MCC.GetSessionProfit(multiplier, filter)
     local totalRevenue = 0
-    local deficitCost, totalRequiredCost = MCC.GetSessionEconomics(multiplier)
+    local deficitCost, totalRequiredCost = MCC.GetSessionEconomics(multiplier, filter)
 
     for playerName, pdata in pairs(MCC_Config) do
-        if type(pdata) == "table" then
-            for _, metier in ipairs(pdata.metiers or {}) do
-                if metier.currentCraft then
+        if type(pdata) == "table" and not pdata.ignoreToday then
+            for metierIndex, metier in ipairs(pdata.metiers or {}) do
+                if (not filter or (filter.playerName == playerName and filter.metierIndex == metierIndex)) and metier.currentCraft then
                     local craftQty = MCC.GetEffectiveCraftQuantity(metier) * (multiplier or 1)
                     local outputQty = metier.outputQty or 1
                     local bestItemID = metier.outputItemID

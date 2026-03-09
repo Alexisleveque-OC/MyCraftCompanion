@@ -1,4 +1,10 @@
 local addonName, MCC = ...
+local tonumber = tonumber
+local string = string
+local math = math
+local CreateFrame = CreateFrame
+local GetItemInfo = GetItemInfo
+local GameTooltip = GameTooltip
 
 function MCC.InitShoppingUI(parent)
     local shoppingTitle = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
@@ -78,11 +84,12 @@ function MCC.UpdateShoppingList()
     end
 
     local multiplier = tonumber(MCC.MultBox:GetText()) or 1.0
-    local sortedList = MCC.GetMissingIngredients(multiplier)
+    local filter = MCC.ShoppingListFilter
+    local sortedList = MCC.GetMissingIngredients(multiplier, filter)
 
     local profit, revenue, deficitCost, totalRequiredCost = 0, 0, 0, 0
     if MCC.GetSessionProfit then
-        profit, revenue, deficitCost, totalRequiredCost = MCC.GetSessionProfit(multiplier)
+        profit, revenue, deficitCost, totalRequiredCost = MCC.GetSessionProfit(multiplier, filter)
     end
 
     local y = 0
@@ -121,6 +128,26 @@ function MCC.UpdateShoppingList()
         profitLabel:SetText("|cffffd700Profit:|r  " .. GetProfitString(profit))
 
         y = -80
+
+        -- FILTER INFO
+        if filter then
+            local filterLabel = header:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            filterLabel:SetPoint("TOPLEFT", 10, -75) -- Moved below stats
+            local cleanName = filter.playerName:match("(.-)-") or filter.playerName
+            filterLabel:SetText(string.format(MCC.L["Filter: %s (%s)"], filter.recipeName or "???", cleanName))
+            filterLabel:SetTextColor(0, 0.8, 1)
+
+            local resetBtn = CreateFrame("Button", nil, header, "UIPanelButtonTemplate")
+            resetBtn:SetSize(100, 20)
+            resetBtn:SetPoint("LEFT", filterLabel, "RIGHT", 10, 0)
+            resetBtn:SetText(MCC.L["Reset Filter"] or "Reset")
+            resetBtn:SetScript("OnClick", function()
+                MCC.ShoppingListFilter = nil
+                MCC.UpdateShoppingList()
+            end)
+
+            y = -110 -- Push ingredients further down
+        end
     end
 
     -- ONLY SHOW INGREDIENTS IF NOT COLLAPSED
@@ -226,8 +253,15 @@ function MCC.ShowExportPopup()
     end
 
     local multiplier = tonumber(frames.MultBox:GetText()) or 1.0
-    local exportText = "MCC Export"
-    local missing = MCC.GetMissingIngredients(multiplier)
+    local filter = MCC.ShoppingListFilter
+    local exportHeader = "MCC Export"
+    if filter and filter.recipeName then
+        local cleanRecipe = filter.recipeName:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+        exportHeader = exportHeader .. " (" .. cleanRecipe .. ")"
+    end
+
+    local exportText = exportHeader
+    local missing = MCC.GetMissingIngredients(multiplier, filter)
 
     for _, data in ipairs(missing) do
         if data.deficit > 0 then

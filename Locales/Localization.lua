@@ -153,6 +153,12 @@ if locale == "frFR" then
     L["PRÊT À CRAFTER (CAP MAX)"] = "PRÊT À CRAFTER (CAP MAX)"
     L["Shopping_List_Source_Note"] =
     "|cffff9900Note :|r Les calculs de profits et les quantités d'ingrédients s'adaptent automatiquement à cette source."
+    L["Solo Shopping List"] = "Shopping List Individuelle"
+    L["Reset Filter"] = "Tout voir"
+    L["Filter: %s (%s)"] = "Filtré : %s (%s)"
+    L["Ignore Today"] = "Ignorer aujourd'hui"
+    L["Skip all crafts for this character in global lists."] =
+    "Exclure tous les métiers de ce perso des listes globales."
 else
     -- English Translations (Explicit for clarity, though fallback works)
     L["Shopping List (Total Ingredients)"] = "Shopping List (Total Ingredients)"
@@ -294,6 +300,11 @@ else
     L["PRÊT À CRAFTER (CAP MAX)"] = "READY TO CRAFT (MAX CAP)"
     L["Shopping_List_Source_Note"] =
     "|cffff9900Note:|r Profit calculations and ingredient quantities automatically adapt to this source."
+    L["Solo Shopping List"] = "Solo Shopping List"
+    L["Reset Filter"] = "Show All"
+    L["Filter: %s (%s)"] = "Filtered: %s (%s)"
+    L["Ignore Today"] = "Ignore Today"
+    L["Skip all crafts for this character in global lists."] = "Skip all crafts for this character in global lists."
 end
 
 MCC.L = L

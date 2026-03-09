@@ -1,4 +1,28 @@
 local addonName, MCC = ...
+local CreateFrame = CreateFrame
+local GameTooltip = GameTooltip
+local ipairs = ipairs
+local next = next
+local tonumber = tonumber
+local tostring = tostring
+local pairs = pairs
+local unpack = unpack
+local math = math
+local IsShiftKeyDown = IsShiftKeyDown
+local UIDropDownMenu_SetWidth = UIDropDownMenu_SetWidth
+local UIDropDownMenu_Initialize = UIDropDownMenu_Initialize
+local UIDropDownMenu_CreateInfo = UIDropDownMenu_CreateInfo
+local UIDropDownMenu_AddButton = UIDropDownMenu_AddButton
+local UIDropDownMenu_SetText = UIDropDownMenu_SetText
+local C_Item = C_Item
+local C_TradeSkillUI = C_TradeSkillUI
+local C_ClassColor = C_ClassColor
+local C_CurrencyInfo = C_CurrencyInfo
+local UnitName = UnitName
+local GetRealmName = GetRealmName
+local ChatEdit_InsertLink = ChatEdit_InsertLink
+local SELECTED_CHAT_FRAME = SELECTED_CHAT_FRAME
+local GetMoneyString = GetMoneyString
 
 function MCC.CreatePlayerHeader(parent, playerName, pdata, columnIndex)
     local header = CreateFrame("Frame", nil, parent, "BackdropTemplate")
@@ -32,6 +56,27 @@ function MCC.CreatePlayerHeader(parent, playerName, pdata, columnIndex)
     elseif MCC.Styles then
         title:SetTextColor(unpack(MCC.Styles.Colors.Gold))
     end
+
+    -- Ignore Today Checkbox
+    local ignoreCb = CreateFrame("CheckButton", nil, header, "InterfaceOptionsCheckButtonTemplate")
+    ignoreCb:SetSize(22, 22)
+    ignoreCb:SetPoint("TOPRIGHT", -5, -5)
+    ignoreCb.Text:SetText("")
+    ignoreCb:SetChecked(pdata.ignoreToday or false)
+    ignoreCb:SetScript("OnClick", function(self)
+        pdata.ignoreToday = self:GetChecked()
+        MCC.UpdateShoppingList()
+        MCC.UpdateMainUI() -- Refresh totals if displayed in header
+    end)
+    ignoreCb:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText(MCC.L["Ignore Today"] or "Ignore Today")
+        GameTooltip:AddLine(
+            MCC.L["Skip all crafts for this character in global lists."] or
+            "Skip all crafts for this character in global lists.", 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    ignoreCb:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     local profileDropdown = CreateFrame("Frame", "MCC_ProfileDropDown_" .. playerName, header, "UIDropDownMenuTemplate")
     profileDropdown:SetPoint("TOP", 0, y - 22)
@@ -92,8 +137,26 @@ function MCC.CreatePlayerContent(parent, playerName, pdata, columnIndex)
 
     for metierIndex, metier in ipairs(pdata.metiers or {}) do
         local m = column:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        m:SetPoint("TOPLEFT", 10, y)
+        m:SetPoint("TOPLEFT", 30, y) -- Shifted right for chevron
         m:SetText(metier.name)
+
+        -- Collapse/Expand Toggle
+        local toggle = CreateFrame("Button", nil, column)
+        toggle:SetSize(20, 20)
+        toggle:SetPoint("RIGHT", m, "LEFT", -2, 0)
+
+        local chevron = toggle:CreateTexture(nil, "OVERLAY")
+        chevron:SetAllPoints()
+        if metier.isCollapsed then
+            chevron:SetTexture("Interface\\Buttons\\UI-PlusButton-UP")
+        else
+            chevron:SetTexture("Interface\\Buttons\\UI-MinusButton-UP")
+        end
+
+        toggle:SetScript("OnClick", function()
+            metier.isCollapsed = not metier.isCollapsed
+            MCC.RenderMCCUI()
+        end)
 
         local currentConc = MCC.GetEstimatedConcentration(metier)
         if currentConc and metier.concentrationMax then
@@ -139,6 +202,8 @@ function MCC.CreatePlayerContent(parent, playerName, pdata, columnIndex)
             GameTooltip:SetText(MCC.L["Delete current recipe from MCC"] or "Delete current recipe from MCC")
             GameTooltip:Show()
         end)
+        delBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
         delBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
         UIDropDownMenu_Initialize(craftDropdown, function(self, level)
@@ -236,6 +301,26 @@ function MCC.CreatePlayerContent(parent, playerName, pdata, columnIndex)
         end
 
         UIDropDownMenu_SetText(craftDropdown, itemColorPrefix .. displayLabel .. "|r")
+
+        -- Solo Shopping List Button
+        local soloBtn = CreateFrame("Button", nil, column, "UIPanelButtonTemplate")
+        soloBtn:SetSize(20, 20)
+        soloBtn:SetNormalTexture("Interface\\Icons\\INV_Misc_Book_09")
+        soloBtn:SetPoint("LEFT", delBtn, "RIGHT", 2, 0)
+        soloBtn:SetScript("OnClick", function()
+            MCC.ShoppingListFilter = {
+                playerName = playerName,
+                metierIndex = metierIndex,
+                recipeName = (itemColorPrefix .. displayLabel .. "|r")
+            }
+            if MCC.UpdateShoppingList then MCC.UpdateShoppingList() end
+        end)
+        soloBtn:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(MCC.L["Solo Shopping List"] or "Solo Shopping List")
+            GameTooltip:Show()
+        end)
+        soloBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
         if metier.currentCraft and bestItemID then
             MCC.AttachItemTooltip(craftDropdown, bestItemID)
         end
@@ -327,15 +412,20 @@ function MCC.CreatePlayerContent(parent, playerName, pdata, columnIndex)
                 MCC.RenderMCCUI()
             end)
 
-            y = y - 55
-            for _, slot in ipairs(metier.craftRecipe or {}) do
-                MCC.CreateIngredientLine(column, y, slot, playerName, metierIndex)
-                y = y - MCC.ROW_HEIGHT
+            if not metier.isCollapsed then
+                y = y - 55
+                for _, slot in ipairs(metier.craftRecipe or {}) do
+                    MCC.CreateIngredientLine(column, y, slot, playerName, metierIndex)
+                    y = y - MCC.ROW_HEIGHT
+                end
+                y = y - 15
+            else
+                y = y - 45 -- Space for the stats but no ingredients
             end
-            y = y - 15
         else
             y = y - 5
         end
+        y = y - 10 -- Spacer between professions
     end
 
     local frames = MCC.GetUIFrames()

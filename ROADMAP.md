@@ -101,10 +101,10 @@ Orchestration complète d’une session industrielle.
 - [x] Définir une configuration: utilisé les infos rentré par l'user ou le cap par la concentration pour calculer la shopping list et les crafts à faire.
 
 ### 2.5.5 UI/UX [v0.4.2] [??]
-- [??] pouvoir plier/déplier (masquer la liste des ingrédients sous chaque recette mais garder la partie cap et profit) les recettes dans L'UI pour que ce soit plus lisible. ça permettra d'avoir juste une sélection de recette et voir ce qui est le plus rentable en fonction des composants qu'on aura choisi
-- [??] Une case "Ignorer ce personnage aujourd'hui"
+- [x] pouvoir plier/déplier (masquer la liste des ingrédients sous chaque recette mais garder la partie cap et profit) les recettes dans L'UI pour que ce soit plus lisible. ça permettra d'avoir juste une sélection de recette et voir ce qui est le plus rentable en fonction des composants qu'on aura choisi
+- [x] Une case "Ignorer ce personnage aujourd'hui"
 - [??] Copier la recette depuis un autre personnage
-- [??] faire un bouton pour créer une shopping list juste pour un item (dans la liste des recettes)
+- [x] faire un bouton pour créer une shopping list juste pour un item (dans la liste des recettes)
 - [??] quand on set current craft, il faut que ça add les ingrédients rang 1 et que ça n'ajoute pas les ingrédients optionnels
 - [??] fix delete recipe-> set current craft none
 - [??] Faire une shopping liste pour commencer les métiers de forge / Joa / enchant /calligraphie
