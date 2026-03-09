@@ -104,6 +104,17 @@ Orchestration complète d’une session industrielle.
 - [??] pouvoir plier/déplier (masquer la liste des ingrédients sous chaque recette mais garder la partie cap et profit) les recettes dans L'UI pour que ce soit plus lisible. ça permettra d'avoir juste une sélection de recette et voir ce qui est le plus rentable en fonction des composants qu'on aura choisi
 - [??] Une case "Ignorer ce personnage aujourd'hui"
 - [??] Copier la recette depuis un autre personnage
+- [??] faire un bouton pour créer une shopping list juste pour un item (dans la liste des recettes)
+- [??] quand on set current craft, il faut que ça add les ingrédients rang 1 et que ça n'ajoute pas les ingrédients optionnels
+- [??] fix delete recipe-> set current craft none
+- [??] Faire une shopping liste pour commencer les métiers de forge / Joa / enchant /calligraphie
+- [??] Ajouter la concentration value sur chaque recette ( = génération de gold pour 1 point de concentration )
+- [??] un bouton qui permete de définir tous les craft avec la meilleur concentration value ou le plus grand profit (au choix de l'user)
+- [??] pouvoir déplier/plier toutes les recettes pour ne voir que le profit
+- [??] faire une page de résumé qui deviendra meme la page principale
+
+### 2.5.6 fix le workflow [v0.4.3] [??]
+- [??] faire en sorte que tout aille bien !
 
 ---
 
@@ -122,16 +133,20 @@ Rendre l'addon plus libre pour tous le monde. Autant pour les débutant que pour
 - [!!] **Mode Guidé** : "Je me laisse porter" - MCC définit par défaut les ingrédients les plus simples à utiliser.
   - Bien mettre une note que ça ne sera pas forcément le plus opti mais le plus simple
   - il va y avoir un peu de travail pour pour connaitre toutes les recettes et leur ingrédients.
+  - mettre en relation la shopping list plus haut
   - il faut conseillé les métiers simples pour les joueurs (joa, forge, enchant, calli)
   - un mini guide écrit :
+  - guide leveling 1-50
    - les points à gagner rapidement et facilement
     - la liste des outils à aller chercher
     - les commandes 
     - la quète hebdo
     - le first craft  
+    - quelques addons utiles
    - Quel spé et talent séléctionner en premier
    - Ne pas oublier les outils de métier
-   - Ne pas Négliger l'acuité pour créer des outils plus puissant pour le long terme### UI/UX
+   - Ne pas Négliger la moxie pour les recettes sauf pour les crafeteurs only
+   ### UI/UX
 - [??] définir
 
 ### 3.3 UI/UX
