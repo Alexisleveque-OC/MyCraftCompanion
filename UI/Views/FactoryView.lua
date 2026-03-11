@@ -66,7 +66,7 @@ function MCC.CreatePlayerHeader(parent, playerName, pdata, columnIndex)
     ignoreCb:SetScript("OnClick", function(self)
         pdata.ignoreToday = self:GetChecked()
         MCC.UpdateShoppingList()
-        MCC.UpdateMainUI() -- Refresh totals if displayed in header
+        MCC.RenderMCCUI() -- Refresh totals if displayed in header
     end)
     ignoreCb:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")

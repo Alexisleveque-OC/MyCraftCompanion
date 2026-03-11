@@ -227,9 +227,9 @@ function MCC.SetCurrentCraft(playerName, metierIndex, recipe, concCost, uiReagen
                 end
 
                 if #options > 0 then
-                    -- SMART PRE-FILLING: Take the highest rank available by default
+                    -- Default to Rank 1 (first option) as per user request
                     -- But if uiReagents override was provided, use that instead
-                    local bestOption = options[#options]
+                    local bestOption = options[1]
                     local overrideItemID = uiReagents and uiReagents[slotIndex]
                     if overrideItemID then
                         -- Find the matching option by itemID

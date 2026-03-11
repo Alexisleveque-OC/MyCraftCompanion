@@ -13,8 +13,6 @@ local GetRealmName = GetRealmName
 local C_Container = C_Container
 local C_Bank = C_Bank
 local SendMailNameEditBox = SendMailNameEditBox
-local MailFrame = MailFrame
-local ProfessionsFrame = ProfessionsFrame
 local hooksecurefunc = hooksecurefunc
 local select = select
 local pcall = pcall
@@ -62,33 +60,39 @@ function MCC.CaptureProfessionData()
 end
 
 function MCC.InitProfessionUI()
-    -- Data capture should happen every time Init is called (which is on TRADE_SKILL_SHOW)
     MCC.CaptureProfessionData()
 
-    if not ProfessionsFrame or MCC_SetCraftButton then return end
+    if not ProfessionsFrame then return end
 
     local parent = ProfessionsFrame.CraftingPage
-    if not parent then return end -- Fallback
+    if not parent or not parent.SchematicForm then
+        -- Retry soon if the sub-frames aren't ready yet
+        C_Timer.After(0.2, MCC.InitProfessionUI)
+        return
+    end
+
+    if MCC_SetCraftButton then return end
 
     local setCurrentCraftbutton = CreateFrame("Button", "MCC_SetCraftButton", parent, "UIPanelButtonTemplate")
     setCurrentCraftbutton:SetSize(160, 22)
     setCurrentCraftbutton:SetText(MCC.L["Set MCC Craft"] or "Set MCC Craft")
-    -- Default anchor: top-right of CraftingPage. Will be dynamically repositioned below SchematicForm requirements on first show.
     setCurrentCraftbutton:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -15, -25)
     setCurrentCraftbutton:SetFrameStrata("HIGH")
 
     local function GetCurrentRecipeContext()
+        if not ProfessionsFrame or not ProfessionsFrame.CraftingPage or not ProfessionsFrame.CraftingPage.SchematicForm then
+            return nil
+        end
         local schematicForm = ProfessionsFrame.CraftingPage.SchematicForm
-        local recipeInfo = schematicForm and schematicForm:GetRecipeInfo()
+        local recipeInfo = schematicForm:GetRecipeInfo()
         if not recipeInfo then return nil end
 
-        local professionInfo = ProfessionsFrame:GetProfessionInfo()
+        local professionInfo = ProfessionsFrame.GetProfessionInfo and ProfessionsFrame:GetProfessionInfo()
         local displayName = professionInfo and professionInfo.displayName
-        local player = MCC.player or (UnitName("player") .. "-" .. GetRealmName())
+        local player = MCC.player
 
         local metierIndex = nil
-        if MCC_Config[player] and MCC_Config[player].metiers then
-            -- Loop through all métiers to find the matching name
+        if displayName and MCC_Config[player] and MCC_Config[player].metiers then
             for i, metier in ipairs(MCC_Config[player].metiers) do
                 if metier.name == displayName then
                     metierIndex = i
@@ -156,78 +160,13 @@ function MCC.InitProfessionUI()
 
     setCurrentCraftbutton:SetScript("OnClick", function()
         local recipeInfo, metierIndex, player = GetCurrentRecipeContext()
-        if not recipeInfo or not metierIndex then
-            return
-        end
+        if not recipeInfo or not metierIndex then return end
 
-        -- DYNAMIC CAPTURE: Look for concentration cost in multiple possible UI locations
         local concCost = 0
         local schematicForm = ProfessionsFrame.CraftingPage and ProfessionsFrame.CraftingPage.SchematicForm
         if schematicForm then
-            local opInfo = nil
-            if schematicForm.GetRecipeOperationInfo then
-                opInfo = schematicForm:GetRecipeOperationInfo()
-            elseif schematicForm.GetCraftingOperationInfo then
-                opInfo = schematicForm:GetCraftingOperationInfo()
-            end
-
-            if not opInfo and schematicForm.GetTransaction then
-                local transaction = schematicForm:GetTransaction()
-                if transaction then
-                    if transaction.GetRecipeOperationInfo then
-                        opInfo = transaction:GetRecipeOperationInfo()
-                    elseif transaction.GetCraftingOperationInfo then
-                        opInfo = transaction:GetCraftingOperationInfo()
-                    end
-                end
-            end
-
-            if opInfo then
-                concCost = opInfo.concentrationCost or 0
-            end
-        end
-
-        local recipeInfo = GetCurrentRecipeContext()
-        if not recipeInfo then return end
-
-        local player = MCC.player
-        local metierIndex = nil
-
-        -- Find matching metier index
-        if MCC_Config[player] and MCC_Config[player].metiers then
-            for i, m in ipairs(MCC_Config[player].metiers) do
-                if m.name == C_TradeSkillUI.GetBaseProfessionInfo().professionName or
-                    m.name == C_TradeSkillUI.GetChildProfessionInfo().professionName then
-                    metierIndex = i
-                    break
-                end
-            end
-        end
-
-        if not metierIndex then return end
-
-        -- DYNAMIC CAPTURE: Look for concentration cost in multiple possible UI locations
-        local concCost = 0
-        local schematicForm = ProfessionsFrame.CraftingPage and ProfessionsFrame.CraftingPage.SchematicForm
-        if schematicForm then
-            local opInfo = nil
-            if schematicForm.GetRecipeOperationInfo then
-                opInfo = schematicForm:GetRecipeOperationInfo()
-            elseif schematicForm.GetCraftingOperationInfo then
-                opInfo = schematicForm:GetCraftingOperationInfo()
-            end
-
-            if not opInfo and schematicForm.GetTransaction then
-                local transaction = schematicForm:GetTransaction()
-                if transaction then
-                    if transaction.GetRecipeOperationInfo then
-                        opInfo = transaction:GetRecipeOperationInfo()
-                    elseif transaction.GetCraftingOperationInfo then
-                        opInfo = transaction:GetCraftingOperationInfo()
-                    end
-                end
-            end
-
+            local opInfo = schematicForm.GetRecipeOperationInfo and schematicForm:GetRecipeOperationInfo() or
+                (schematicForm.GetCraftingOperationInfo and schematicForm:GetCraftingOperationInfo())
             if opInfo then
                 concCost = opInfo.concentrationCost or 0
             end
@@ -272,10 +211,26 @@ function MCC.InitProfessionUI()
             return
         end
 
-        -- Use IsVisible() which checks the entire hierarchy
         local page = ProfessionsFrame.CraftingPage
         if page and page:IsVisible() then
             self:Show()
+            -- Safety re-anchor if it was missed during init
+            if not self.anchored then
+                local sf = page.SchematicForm
+                if sf and sf.OutputIcon and sf.OutputIcon:IsShown() then
+                    self:ClearAllPoints()
+                    self:SetPoint("TOPLEFT", sf.OutputIcon, "TOPRIGHT", 8, -40)
+                    if MCC_FavoriteButton then
+                        MCC_FavoriteButton:ClearAllPoints()
+                        MCC_FavoriteButton:SetPoint("RIGHT", self, "LEFT", -4, 0)
+                    end
+                    if MCC_DeleteCraftButton then
+                        MCC_DeleteCraftButton:ClearAllPoints()
+                        MCC_DeleteCraftButton:SetPoint("LEFT", self, "RIGHT", 4, 0)
+                    end
+                    self.anchored = true
+                end
+            end
         else
             self:Hide()
         end
